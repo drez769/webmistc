@@ -2,9 +2,9 @@
  (c) 2013, Vladimir Agafonkin
  Simplify.js, a high-performance JS polyline simplification library
  mourner.github.io/simplify-js
-*/
+ */
 
-SimplifyPath = function () { 
+SimplifyPath = function () {
     "use strict";
 
     var self = this;
@@ -48,6 +48,7 @@ SimplifyPath = function () {
 
         return dx * dx + dy * dy;
     }
+
     // rest of the code doesn't care about point format
 
     // basic distance-based simplification
@@ -119,7 +120,7 @@ SimplifyPath = function () {
     }
 
     // both algorithms combined for awesome performance
-    self.simplify = function(points, tolerance, highestQuality) {
+    self.simplify = function (points, tolerance, highestQuality) {
 
         var sqTolerance = tolerance !== undefined ? tolerance * tolerance : 1;
 

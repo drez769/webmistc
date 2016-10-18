@@ -1,6 +1,6 @@
 /**
-* Models
-*/
+ * Models
+ */
 
 Messages = new Meteor.Collection('messages');
 SlidesCollection = new Meteor.Collection('slidesCollection');

@@ -1,22 +1,22 @@
 <template name="toolPanel">
-    
-    {{> stickyReplace}}  
+
+    {{> stickyReplace}}
 
     {{> tools}}
 
     <div class="btn-group padded">
-      {{#if hasSelectedTextTool}}
-        {{> font}}
-      {{else}}
-        {{> outline}}
-      {{/if}}  
+        {{#if hasSelectedTextTool}}
+            {{> font}}
+        {{else}}
+            {{> outline}}
+        {{/if}}
 
-      {{> colors}} 
+        {{> colors}}
     </div>
 
     {{> erasers}}
 
-    {{> create}} 
+    {{> create}}
 
     {{> record}}
 
