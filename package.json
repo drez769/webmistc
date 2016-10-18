@@ -18,7 +18,7 @@
   "homepage": "https://github.com/dvoegeli/webmistc",
   "dependencies": {
     "filesaverjs": "^0.2.2",
-    "jquery": "^3.1.1",
+    "jquery": "2.2.4",
     "lodash": "^4.16.4",
     "meteor-node-stubs": "^0.2.3"
   }
