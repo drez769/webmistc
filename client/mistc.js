@@ -1,32 +1,13 @@
+import FileSaver from 'filesaverjs';
+// wrong syntax
+// with brackets means exported variable of module
+// without brackets means entire module
+import {Playback} from '../imports/playback-library.js';
+import {Recording} from '../imports/recording-library.js';
+
+import {Recordings} from '../imports/recording-library.js';
+
 if (Meteor.isClient) {
-
-import
-    FileSaver
-    from
-    'filesaverjs';
-    // wrong syntax
-    // with brackets means exported variable of module
-    // without brackets means entire module
-import
-    {
-        Playback
-    }
-    from
-    '../imports/playback-library.js';
-import
-    {
-        Recording
-    }
-    from
-    '../imports/recording-library.js';
-
-import
-    {
-        Recordings
-    }
-    from
-    '../imports/recording-library.js';
-
     // libraries
     var overlayLibrary;
     var slideLibrary;
