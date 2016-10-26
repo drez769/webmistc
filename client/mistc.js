@@ -1,10 +1,9 @@
 import FileSaver from 'filesaverjs';
+import MediaStreamRecorder from 'msr';
 // wrong syntax
 // with brackets means exported variable of module
 // without brackets means entire module
 import {Playback} from '../imports/playback-library.js';
-import {Recording} from '../imports/recording-library.js';
-
 import {Recordings} from '../imports/recording-library.js';
 
 if (Meteor.isClient) {
@@ -167,6 +166,28 @@ if (Meteor.isClient) {
                     params: [slideLibrary.title(), Session.get('slide.page')],
                     time: Date.now(),
                 });
+
+                var mediaConstraints = {
+                    audio: true
+                };
+
+                navigator.getUserMedia(mediaConstraints, onMediaSuccess, onMediaError);
+
+                function onMediaSuccess(stream) {
+                    var mediaRecorder = new MediaStreamRecorder(stream);
+                    mediaRecorder.mimeType = 'audio/webm'; // audio/webm or audio/ogg or audio/wav
+                    mediaRecorder.ondataavailable = function (blob) {
+                        // POST/PUT "Blob" using FormData/XHR2
+                        var blobURL = URL.createObjectURL(blob);
+                        document.write('' + blobURL + '');
+                    };
+                    mediaRecorder.start(3000);
+                }
+
+                function onMediaError(e) {
+                    console.error('media error', e);
+                }
+
             } else {
                 const time = Date.now();
                 Meteor.call('recordings.insert', {
