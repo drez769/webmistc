@@ -1,5 +1,6 @@
 import FileSaver from 'filesaverjs';
 import MediaStreamRecorder from 'msr';
+import MediaRecorderWrapper from 'msr';
 // wrong syntax
 // with brackets means exported variable of module
 // without brackets means entire module
@@ -10,6 +11,10 @@ if (Meteor.isClient) {
     // libraries
     var overlayLibrary;
     var slideLibrary;
+
+    //global media recorder variable (used to start/stop the recording)
+    var mediaRecorder;
+    var index = 0;
 
     // Startup
     Meteor.startup(function () {
@@ -167,28 +172,50 @@ if (Meteor.isClient) {
                     time: Date.now(),
                 });
 
-                var mediaConstraints = {
-                    audio: true
-                };
+                //Requests permission to record audio from the browser using native RTC
+                navigator.getUserMedia({
+                    audio: true,
+                    video: false
+                }, onMediaSuccess, onMediaError);
 
-                navigator.getUserMedia(mediaConstraints, onMediaSuccess, onMediaError);
-
+                //This method is called when the permission request is successful
                 function onMediaSuccess(stream) {
-                    var mediaRecorder = new MediaStreamRecorder(stream);
-                    mediaRecorder.mimeType = 'audio/webm'; // audio/webm or audio/ogg or audio/wav
+                    //This initializes MSR with the stream from navigator.getUserMedia
+                    mediaRecorder = new MediaStreamRecorder(stream);
+                    mediaRecorder.stream = stream;
+                    mediaRecorder.mimeType = 'audio/wav';
+                    mediaRecorder.audioChannels = 2;
+
+                    //This method is called every (interval) the value passed to start (and on manual stop)
+                    /*
                     mediaRecorder.ondataavailable = function (blob) {
-                        // POST/PUT "Blob" using FormData/XHR2
-                        var blobURL = URL.createObjectURL(blob);
-                        document.write('' + blobURL + '');
+
                     };
-                    mediaRecorder.start(3000);
+                    */
+
+                    //This begins the recording from the open stream
+                    //Long interval hack because msr breaks the audio into pieces - need to investigate further
+                    mediaRecorder.start(5000 * 1000);
                 }
 
+                //This method is called when the permission request fails
                 function onMediaError(e) {
-                    console.error('media error', e);
+                    console.error('Error: ', e);
                 }
 
             } else {
+                //Validate the recorder was initialized
+                //TODO: we should probably prevent the JSON recording from starting if the audio fails to stream.
+                if (mediaRecorder !== undefined
+                    && mediaRecorder.stop !== undefined) {
+                    //this stops the recording
+                    mediaRecorder.stop();
+                    mediaRecorder.stream.stop();
+                }
+                else {
+                    console.log("Media recorder is undefined");
+                }
+
                 const time = Date.now();
                 Meteor.call('recordings.insert', {
                     state: 'time',
@@ -203,6 +230,16 @@ if (Meteor.isClient) {
             const recording = Recordings.find({}).fetch();
             const blob = new Blob([JSON.stringify(recording, null, 2)], {type: "text/plain;charset=utf-8"});
             FileSaver.saveAs(blob, "recording.json");
+            if (mediaRecorder !== undefined
+                && mediaRecorder.stop !== undefined) {
+                //download the file
+                //one issue to keep in mind is blobs do not have any lifetime promises
+                //TODO: need to upload to the server once the recording stops
+                mediaRecorder.save();
+            }
+            else {
+                console.log("Media recorder is undefined");
+            }
         }
     });
 
