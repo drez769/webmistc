@@ -133,6 +133,13 @@
     background-color: cadetblue;
 }
 
+#control-fluid video {
+    width: 200px;
+    height: 100%;
+    overflow-y: hidden;
+    overflow-x: auto;
+}
+
 #question-panel {
     width: 300px;
     height: calc((100vh - 100px) / 2);

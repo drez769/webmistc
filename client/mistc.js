@@ -1,11 +1,15 @@
 import FileSaver from 'filesaverjs';
 import MediaStreamRecorder from 'msr';
-import MediaRecorderWrapper from 'msr';
 // wrong syntax
 // with brackets means exported variable of module
 // without brackets means entire module
 import {Playback} from '../imports/playback-library.js';
 import {Recordings} from '../imports/recording-library.js';
+
+//this import is included from the index.html <script> tag.
+var _connection = new RTCMultiConnection();
+var _stream;
+var CONFERENCE_ROOM_ID = '1234';
 
 if (Meteor.isClient) {
     // libraries
@@ -171,38 +175,21 @@ if (Meteor.isClient) {
                     params: [slideLibrary.title(), Session.get('slide.page')],
                     time: Date.now(),
                 });
+                //here we begin the recording for what the user is saying. (but not what they hear)
+                mediaRecorder = new MediaStreamRecorder(_stream);
+                mediaRecorder.mimeType = 'audio/wav';
+                mediaRecorder.audioChannels = 2;
 
-                //Requests permission to record audio from the browser using native RTC
-                navigator.getUserMedia({
-                    audio: true,
-                    video: false
-                }, onMediaSuccess, onMediaError);
+                //This method is called every (interval) the value passed to start (and on manual stop)
+                /*
+                 mediaRecorder.ondataavailable = function (blob) {
 
-                //This method is called when the permission request is successful
-                function onMediaSuccess(stream) {
-                    //This initializes MSR with the stream from navigator.getUserMedia
-                    mediaRecorder = new MediaStreamRecorder(stream);
-                    mediaRecorder.stream = stream;
-                    mediaRecorder.mimeType = 'audio/wav';
-                    mediaRecorder.audioChannels = 2;
+                 };
+                 */
 
-                    //This method is called every (interval) the value passed to start (and on manual stop)
-                    /*
-                    mediaRecorder.ondataavailable = function (blob) {
-
-                    };
-                    */
-
-                    //This begins the recording from the open stream
-                    //Long interval hack because msr breaks the audio into pieces - need to investigate further
-                    mediaRecorder.start(5000 * 1000);
-                }
-
-                //This method is called when the permission request fails
-                function onMediaError(e) {
-                    console.error('Error: ', e);
-                }
-
+                //This begins the recording from the open stream
+                //Long interval hack because msr breaks the audio into pieces - need to investigate further
+                mediaRecorder.start(5000 * 1000);
             } else {
                 //Validate the recorder was initialized
                 //TODO: we should probably prevent the JSON recording from starting if the audio fails to stream.
@@ -210,12 +197,7 @@ if (Meteor.isClient) {
                     && mediaRecorder.stop !== undefined) {
                     //this stops the recording
                     mediaRecorder.stop();
-                    mediaRecorder.stream.stop();
                 }
-                else {
-                    console.log("Media recorder is undefined");
-                }
-
                 const time = Date.now();
                 Meteor.call('recordings.insert', {
                     state: 'time',
@@ -236,9 +218,6 @@ if (Meteor.isClient) {
                 //one issue to keep in mind is blobs do not have any lifetime promises
                 //TODO: need to upload to the server once the recording stops
                 mediaRecorder.save();
-            }
-            else {
-                console.log("Media recorder is undefined");
             }
         }
     });
@@ -478,11 +457,35 @@ if (Meteor.isClient) {
             var tagName = (event.target || event.srcElement).tagName;
             return (tagName === 'SPAN');
         }
-    }
+    };
 
     Template.overlay.onRendered(function () {
-
-    })
+        //configure default conference settings.
+        //currently the first user to begin is the instructor.
+        //we include video but have no plans for video recording.
+        _connection.socketURL = 'https://rtcmulticonnection.herokuapp.com:443/';
+        _connection.session = {
+            audio: true,
+            video: true
+        };
+        _connection.sdpConstraints.mandatory = {
+            OfferToReceiveAudio: true,
+            OfferToReceiveVideo: true
+        };
+        _connection.onstream = function (event) {
+            _stream = event.stream;
+            document.getElementById('control-fluid').appendChild(event.mediaElement);
+        };
+        //join existing room or assume leader.
+        _connection.checkPresence(CONFERENCE_ROOM_ID, function (isRoomExists) {
+            if (isRoomExists) {
+                _connection.join(CONFERENCE_ROOM_ID);
+            }
+            else {
+                _connection.open(CONFERENCE_ROOM_ID);
+            }
+        });
+    });
 
     Template.overlay.events({
         'click': function (event) {

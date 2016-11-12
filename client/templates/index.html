@@ -5,22 +5,18 @@
     <meta name="description"
           content="MIST/C Web is the successor of MIST/C, which is an open-source, Java-based Internet teaching and conferencing environment.">
     <meta name="author" content="Dorian Voegeli, C4I, GMU">
-
     <title>MISTCweb</title>
+    <script src="https://rtcmulticonnection.herokuapp.com/dist/RTCMultiConnection.min.js"></script>
+    <script src="https://rtcmulticonnection.herokuapp.com/socket.io/socket.io.js"></script>
 </head>
-
-
 <body>
-
 <main>
-
     <aside>
         <section id="tool-panel">
             {{> toolPanel}}
         </section>
         <section id="tool-fluid"></section>
     </aside>
-
     <figure id="whiteboard">
         {{> overlay}}
         {{> slide}}
@@ -28,18 +24,16 @@
     <nav id="slide-nav-panel">
         {{> slideNavPanel}}
     </nav>
-
     <footer>
         <section id="control-panel">
             {{> controlPanel}}
         </section>
-        <section id="control-fluid"></section>
+        <section id="control-fluid">
+
+        </section>
     </footer>
-
 </main>
-
 <aside>
-
     <section class="container" id="question-panel">
         <h4>Questions</h4>
         {{> questionPanel }}
@@ -50,7 +44,5 @@
     <section class="container" id="chat-input">
         {{> chatInput }}
     </section>
-
 </aside>
-
 </body>
