@@ -1,19 +1,22 @@
 import FileSaver from 'filesaverjs';
 import MediaStreamRecorder from 'msr';
+import moment from 'moment'
 // wrong syntax
 // with brackets means exported variable of module
 // without brackets means entire module
 import {Playback} from '../imports/playback-library.js';
 import {Recordings} from '../imports/recording-library.js';
 
-//constant
+//constants
 var CONFERENCE_ROOM_ID = '1234';
+var MILLISECOND_INTERVAL = 10000; //10 seconds in ms
 
 //this import is included from the index.html <script> tag.
 var _connection = new RTCMultiConnection();
 var _mediaRecorderList = [];
 var _audioVideo = {};
 var _isRecording = false;
+var _currentRecordingURL = "";
 
 if (Meteor.isClient) {
     // libraries
@@ -185,26 +188,38 @@ if (Meteor.isClient) {
                 _isRecording = true;
                 //this starts recording for every stream - local is always first
                 _mediaRecorderList.forEach(function (mediaRecorder) {
-                    mediaRecorder.start(60000); //1 minute in ms
+                    mediaRecorder.start(MILLISECOND_INTERVAL);
                 });
             } else {
-                _isRecording = false;
                 //this starts recording for every stream - local is always first
                 _mediaRecorderList.forEach(function (mediaRecorder) {
                     mediaRecorder.stop();
                 });
-
-                //object needed to combine video/audio and use offsets
-                console.log(_audioVideo);
-
-                const time = Date.now();
-                Meteor.call('recordings.insert', {
-                    state: 'time',
-                    action: 'stop',
-                    params: [time],
-                    time: time,
-                });
-                Meteor.call('recordings.stop');
+                //allow time for all recorders to fully stop.
+                setTimeout(function() {
+                    _isRecording = false;
+                    //get resulting video url
+                    var formData = new FormData();
+                    formData.append('json', JSON.stringify(_audioVideo));
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', 'https://www.jkwiz.com/combine.php');
+                    xhr.send(formData);
+                    xhr.onreadystatechange = function () {
+                        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                            var jsonResponse = JSON.parse(xhr.responseText);
+                            _currentRecordingURL = jsonResponse['video'];
+                            console.log(_currentRecordingURL);
+                        }
+                    };
+                    const time = Date.now();
+                    Meteor.call('recordings.insert', {
+                        state: 'time',
+                        action: 'stop',
+                        params: [time],
+                        time: time,
+                    });
+                    Meteor.call('recordings.stop');
+                }, _mediaRecorderList.length * 3000);
             }
         },
         'click .overlay-btn-recording[title="Download"]': function (event) {
@@ -472,7 +487,6 @@ if (Meteor.isClient) {
         _connection.onstreamended = function (event) {
             var target;
             _mediaRecorderList.forEach(function(mediaRecorder, index) {
-                console.log(mediaRecorder);
                 //find the matching recorder
                 if (mediaRecorder.streamid === event.streamid) {
                     target = index;
@@ -499,17 +513,19 @@ if (Meteor.isClient) {
         //used to remove the recorder when the stream ends
         mediaRecorder.streamid = event.streamid;
         //only the presenter will record video, we will merge audio into this video
-        mediaRecorder.mimeType = (isPresenter) ? 'video/webm' : 'audio/wav';
+        mediaRecorder.mimeType = 'audio/wav';
         mediaRecorder.disableLogs = true;
         //this method is called every interval [the value passed to start()]
         mediaRecorder.ondataavailable = function (blob) {
             //the timestamp must be generated immediately to preserve the offset
+            var time = new Date();
             var result = {
-                'time': new Date()
+                'time': time
             };
             //upload file to the server
             var formData = new FormData();
             formData.append('file', blob);
+            formData.append('ext', '.wav');
             var xhr = new XMLHttpRequest();
             xhr.open('POST', 'https://www.jkwiz.com/mistc.php');
             xhr.send(formData);
@@ -522,6 +538,17 @@ if (Meteor.isClient) {
                     //stream does not exist yet
                     if (target[event['streamid']] === undefined) {
                         target[event['streamid']] = [];
+                        //the first participant file has no offset
+                        if (!isPresenter) {
+                            result['offset'] = '00:00:00.000';
+                        }
+                    }
+                    else {
+                        //subsequent participant files have an offset
+                        if (!isPresenter) {
+                            var timeBeforeDiff = moment(time).diff(moment(_audioVideo.time)) - MILLISECOND_INTERVAL;
+                            result['offset'] = moment.utc(timeBeforeDiff).format("HH:mm:ss.SSS");
+                        }
                     }
                     //push new recording into list
                     target[event['streamid']].push(result);
@@ -537,7 +564,7 @@ if (Meteor.isClient) {
         }
         //someone has joined an existing session that is already in progress
         if (_isRecording) {
-            mediaRecorder.start(60000); //1 minute in ms
+            mediaRecorder.start(MILLISECOND_INTERVAL);
         }
     }
 
