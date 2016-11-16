@@ -177,7 +177,8 @@ if (Meteor.isClient) {
                 });
                 //re-initialize when starting recording (no ability to pause)
                 _audioVideo = {
-                    "conference-id": CONFERENCE_ROOM_ID,
+                    "_id": CONFERENCE_ROOM_ID,
+                    "time": new Date(),
                     "presenter": {},
                     "participants": {}
                 };
@@ -517,7 +518,7 @@ if (Meteor.isClient) {
                     var target = (isPresenter) ? _audioVideo.presenter : _audioVideo.participants;
                     var jsonResponse = JSON.parse(xhr.responseText);
                     //identifier generated on the server to avoid collisions
-                    result['_id'] = jsonResponse['object-id'];
+                    result['_id'] = jsonResponse['_id'];
                     //stream does not exist yet
                     if (target[event['streamid']] === undefined) {
                         target[event['streamid']] = [];
