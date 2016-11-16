@@ -6,19 +6,19 @@ import MediaStreamRecorder from 'msr';
 import {Playback} from '../imports/playback-library.js';
 import {Recordings} from '../imports/recording-library.js';
 
+//constant
+var CONFERENCE_ROOM_ID = '1234';
+
 //this import is included from the index.html <script> tag.
 var _connection = new RTCMultiConnection();
-var _stream;
-var CONFERENCE_ROOM_ID = '1234';
+var _mediaRecorderList = [];
+var _audioVideo = {};
+var _isRecording = false;
 
 if (Meteor.isClient) {
     // libraries
     var overlayLibrary;
     var slideLibrary;
-
-    //global media recorder variable (used to start/stop the recording)
-    var mediaRecorder;
-    var index = 0;
 
     // Startup
     Meteor.startup(function () {
@@ -175,29 +175,27 @@ if (Meteor.isClient) {
                     params: [slideLibrary.title(), Session.get('slide.page')],
                     time: Date.now(),
                 });
-                //here we begin the recording for what the user is saying. (but not what they hear)
-                mediaRecorder = new MediaStreamRecorder(_stream);
-                mediaRecorder.mimeType = 'audio/wav';
-                mediaRecorder.audioChannels = 2;
-
-                //This method is called every (interval) the value passed to start (and on manual stop)
-                /*
-                 mediaRecorder.ondataavailable = function (blob) {
-
-                 };
-                 */
-
-                //This begins the recording from the open stream
-                //Long interval hack because msr breaks the audio into pieces - need to investigate further
-                mediaRecorder.start(5000 * 1000);
+                //re-initialize when starting recording (no ability to pause)
+                _audioVideo = {
+                    "conference-id": CONFERENCE_ROOM_ID,
+                    "presenter": {},
+                    "participants": {}
+                };
+                _isRecording = true;
+                //this starts recording for every stream - local is always first
+                _mediaRecorderList.forEach(function (mediaRecorder) {
+                    mediaRecorder.start(60000); //1 minute in ms
+                });
             } else {
-                //Validate the recorder was initialized
-                //TODO: we should probably prevent the JSON recording from starting if the audio fails to stream.
-                if (mediaRecorder !== undefined
-                    && mediaRecorder.stop !== undefined) {
-                    //this stops the recording
+                _isRecording = false;
+                //this starts recording for every stream - local is always first
+                _mediaRecorderList.forEach(function (mediaRecorder) {
                     mediaRecorder.stop();
-                }
+                });
+
+                //object needed to combine video/audio and use offsets
+                console.log(_audioVideo);
+
                 const time = Date.now();
                 Meteor.call('recordings.insert', {
                     state: 'time',
@@ -212,13 +210,6 @@ if (Meteor.isClient) {
             const recording = Recordings.find({}).fetch();
             const blob = new Blob([JSON.stringify(recording, null, 2)], {type: "text/plain;charset=utf-8"});
             FileSaver.saveAs(blob, "recording.json");
-            if (mediaRecorder !== undefined
-                && mediaRecorder.stop !== undefined) {
-                //download the file
-                //one issue to keep in mind is blobs do not have any lifetime promises
-                //TODO: need to upload to the server once the recording stops
-                mediaRecorder.save();
-            }
         }
     });
 
@@ -472,9 +463,24 @@ if (Meteor.isClient) {
             OfferToReceiveAudio: true,
             OfferToReceiveVideo: true
         };
+        _connection.enableLogs = false;
         _connection.onstream = function (event) {
-            _stream = event.stream;
+            startStream(event, (event.type === "local"));
             document.getElementById('control-fluid').appendChild(event.mediaElement);
+        };
+        _connection.onstreamended = function (event) {
+            var _target;
+            _mediaRecorderList.forEach(function(mediaRecorder, index) {
+                console.log(mediaRecorder);
+                //find the matching recorder
+                if (mediaRecorder.streamid === event.streamid) {
+                    _target = index;
+                }
+            });
+            //remove recorder from the list
+            if (_target !== undefined) {
+                _mediaRecorderList.splice(_target, 1);
+            }
         };
         //join existing room or assume leader.
         _connection.checkPresence(CONFERENCE_ROOM_ID, function (isRoomExists) {
@@ -486,6 +492,54 @@ if (Meteor.isClient) {
             }
         });
     });
+
+    function startStream(event, isPresenter) {
+        var mediaRecorder = new MediaStreamRecorder(event.stream);
+        //used to remove the recorder when the stream ends
+        mediaRecorder.streamid = event.streamid;
+        //only the presenter will record video, we will merge audio into this video
+        mediaRecorder.mimeType = (isPresenter) ? 'video/webm' : 'audio/wav';
+        mediaRecorder.disableLogs = true;
+        //this method is called every interval [the value passed to start()]
+        mediaRecorder.ondataavailable = function (blob) {
+            //the timestamp must be generated immediately to preserve the offset
+            var result = {
+                'object-id': null,
+                'timestamp': new Date()
+            };
+            //upload file to the server
+            var formData = new FormData();
+            formData.append('file', blob);
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', 'https://www.jkwiz.com/mistc.php');
+            xhr.send(formData);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                    var target = (isPresenter) ? _audioVideo.presenter : _audioVideo.participants;
+                    var jsonResponse = JSON.parse(xhr.responseText);
+                    //identifier generated on the server to avoid collisions
+                    result['object-id'] = jsonResponse['object-id'];
+                    //stream does not exist yet
+                    if (target[event['streamid']] === undefined) {
+                        target[event['streamid']] = [];
+                    }
+                    //push new recording into list
+                    target[event['streamid']].push(result);
+                }
+            };
+        };
+        //local stream is always first
+        if (event.type === 'local') {
+            _mediaRecorderList.unshift(mediaRecorder)
+        }
+        else {
+            _mediaRecorderList.push(mediaRecorder);
+        }
+        //someone has joined an existing session that is already in progress
+        if (_isRecording) {
+            mediaRecorder.start(60000); //1 minute in ms
+        }
+    }
 
     Template.overlay.events({
         'click': function (event) {

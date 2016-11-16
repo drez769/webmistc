@@ -133,7 +133,7 @@
     background-color: cadetblue;
 }
 
-#control-fluid video {
+#control-fluid video, #control-fluid audio {
     width: 200px;
     height: 100%;
     overflow-y: hidden;
