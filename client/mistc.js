@@ -469,17 +469,17 @@ if (Meteor.isClient) {
             document.getElementById('control-fluid').appendChild(event.mediaElement);
         };
         _connection.onstreamended = function (event) {
-            var _target;
+            var target;
             _mediaRecorderList.forEach(function(mediaRecorder, index) {
                 console.log(mediaRecorder);
                 //find the matching recorder
                 if (mediaRecorder.streamid === event.streamid) {
-                    _target = index;
+                    target = index;
                 }
             });
             //remove recorder from the list
-            if (_target !== undefined) {
-                _mediaRecorderList.splice(_target, 1);
+            if (target !== undefined) {
+                _mediaRecorderList.splice(target, 1);
             }
         };
         //join existing room or assume leader.
@@ -504,8 +504,7 @@ if (Meteor.isClient) {
         mediaRecorder.ondataavailable = function (blob) {
             //the timestamp must be generated immediately to preserve the offset
             var result = {
-                'object-id': null,
-                'timestamp': new Date()
+                'time': new Date()
             };
             //upload file to the server
             var formData = new FormData();
@@ -518,7 +517,7 @@ if (Meteor.isClient) {
                     var target = (isPresenter) ? _audioVideo.presenter : _audioVideo.participants;
                     var jsonResponse = JSON.parse(xhr.responseText);
                     //identifier generated on the server to avoid collisions
-                    result['object-id'] = jsonResponse['object-id'];
+                    result['_id'] = jsonResponse['object-id'];
                     //stream does not exist yet
                     if (target[event['streamid']] === undefined) {
                         target[event['streamid']] = [];
@@ -529,7 +528,7 @@ if (Meteor.isClient) {
             };
         };
         //local stream is always first
-        if (event.type === 'local') {
+        if (isPresenter) {
             _mediaRecorderList.unshift(mediaRecorder)
         }
         else {
