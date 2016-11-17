@@ -540,14 +540,14 @@ if (Meteor.isClient) {
                         target[event['streamid']] = [];
                         //the first participant file has no offset
                         if (!isPresenter) {
-                            result['offset'] = '00:00:00.000';
+                            result['offset'] = '0.000';
                         }
                     }
                     else {
                         //subsequent participant files have an offset
                         if (!isPresenter) {
                             var timeBeforeDiff = moment(time).diff(moment(_audioVideo.time)) - MILLISECOND_INTERVAL;
-                            result['offset'] = moment.utc(timeBeforeDiff).format("HH:mm:ss.SSS");
+                            result['offset'] = (timeBeforeDiff / 1000).toFixed(3);
                         }
                     }
                     //push new recording into list
