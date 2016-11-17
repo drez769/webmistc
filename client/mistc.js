@@ -203,15 +203,15 @@ if (Meteor.isClient) {
                     var formData = new FormData();
                     formData.append('json', JSON.stringify(_audioVideo));
                     var xhr = new XMLHttpRequest();
-                    xhr.open('POST', 'https://www.jkwiz.com/combine2.php');
-                    xhr.send(formData);
                     xhr.onreadystatechange = function () {
                         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
                             var jsonResponse = JSON.parse(xhr.responseText);
                             _currentRecordingURL = jsonResponse['video'];
-                            console.log(_currentRecordingURL);
+                            alert('The recording is now ready for download.');
                         }
                     };
+                    xhr.open('POST', 'https://www.jkwiz.com/combine2.php');
+                    xhr.send(formData);
                     const time = Date.now();
                     Meteor.call('recordings.insert', {
                         state: 'time',
@@ -227,6 +227,15 @@ if (Meteor.isClient) {
             const recording = Recordings.find({}).fetch();
             const blob = new Blob([JSON.stringify(recording, null, 2)], {type: "text/plain;charset=utf-8"});
             FileSaver.saveAs(blob, "recording.json");
+            if (_currentRecordingURL !== "") {
+                var xhr = new XMLHttpRequest();
+                xhr.responseType = 'blob';
+                xhr.onload = function () {
+                    FileSaver.saveAs(xhr.response, "recording.webm");
+                };
+                xhr.open('GET', _currentRecordingURL);
+                xhr.send();
+            }
         }
     });
 
@@ -529,8 +538,6 @@ if (Meteor.isClient) {
             formData.append('file', blob);
             formData.append('ext', '.webm');
             var xhr = new XMLHttpRequest();
-            xhr.open('POST', 'https://www.jkwiz.com/mistc.php');
-            xhr.send(formData);
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
                     var target = (isPresenter) ? _audioVideo.presenter : _audioVideo.participants;
@@ -556,6 +563,8 @@ if (Meteor.isClient) {
                     target[event['streamid']].push(result);
                 }
             };
+            xhr.open('POST', 'https://www.jkwiz.com/mistc.php');
+            xhr.send(formData);
         };
         //local stream is always first
         if (isPresenter) {
