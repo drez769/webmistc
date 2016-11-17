@@ -191,8 +191,10 @@ if (Meteor.isClient) {
                 //this starts recording for every stream - local is always first
                 _mediaRecorderList.forEach(function (mediaRecorder) {
                     mediaRecorder.start(MILLISECOND_INTERVAL);
+                    mediaRecorder.startTime = new Date();
+                    //the first is the local stream, this constant ID's when we started recording
                     if (first) {
-                        _audioVideo.time = new Date();
+                        _audioVideo.time = mediaRecorder.startTime;
                         first = false;
                     }
                 });
@@ -548,6 +550,9 @@ if (Meteor.isClient) {
             var result = {
                 'time': new Date()
             };
+            //the interval is NOT always exactly MILLISECOND_INTERVAL
+            var runTimeMs = result.time.getTime() - mediaRecorder.startTime.getTime();
+            mediaRecorder.startTime = result.time;
             //upload file to the server
             var formData = new FormData();
             formData.append('file', blob);
@@ -563,9 +568,9 @@ if (Meteor.isClient) {
                     if (target[event['streamid']] === undefined) {
                         target[event['streamid']] = [];
                     }
-                    //only participants have offsets todo: the interval is NOT always MILLISECOND_INTERVAL
+                    //only participants have offsets
                     if (!isPresenter) {
-                        var msBefore = (result.time.getTime() - MILLISECOND_INTERVAL) - _audioVideo.time.getTime();
+                        var msBefore = (result.time.getTime() - runTimeMs) - _audioVideo.time.getTime();
                         result['offset'] = (msBefore / 1000).toFixed(3);
                     }
                     //push new recording into list
@@ -585,6 +590,7 @@ if (Meteor.isClient) {
         //someone has joined an existing session that is already in progress
         if (_isRecording) {
             mediaRecorder.start(MILLISECOND_INTERVAL);
+            mediaRecorder.startTime = new Date();
         }
     }
 
