@@ -11,6 +11,7 @@ import {Recordings} from '../imports/recording-library.js';
 //constants
 var CONFERENCE_ROOM_ID = '1234';
 var MILLISECOND_INTERVAL = 10000; //10 seconds in ms
+var FILE_TYPE = 'wav';
 
 //this import is included from the index.html <script> tag.
 var _connection = new RTCMultiConnection();
@@ -210,7 +211,7 @@ if (Meteor.isClient) {
                             alert('The recording is now ready for download.');
                         }
                     };
-                    xhr.open('POST', 'https://www.jkwiz.com/combine2.php');
+                    xhr.open('POST', 'https://www.jkwiz.com/combine.php');
                     xhr.send(formData);
                     const time = Date.now();
                     Meteor.call('recordings.insert', {
@@ -231,7 +232,7 @@ if (Meteor.isClient) {
                 var xhr = new XMLHttpRequest();
                 xhr.responseType = 'blob';
                 xhr.onload = function () {
-                    FileSaver.saveAs(xhr.response, "recording.webm");
+                    FileSaver.saveAs(xhr.response, "recording." + FILE_TYPE);
                 };
                 xhr.open('GET', _currentRecordingURL);
                 xhr.send();
@@ -523,7 +524,7 @@ if (Meteor.isClient) {
         //used to remove the recorder when the stream ends
         mediaRecorder.streamid = event.streamid;
         //only the presenter will record video, we will merge audio into this video
-        mediaRecorder.mimeType = (isPresenter) ? 'video/webm' : 'audio/webm';
+        mediaRecorder.mimeType = 'audio/' + FILE_TYPE;
         mediaRecorder.disableLogs = true;
         mediaRecorder.recorderType = StereoAudioRecorder;
         //this method is called every interval [the value passed to start()]
@@ -536,7 +537,7 @@ if (Meteor.isClient) {
             //upload file to the server
             var formData = new FormData();
             formData.append('file', blob);
-            formData.append('ext', '.webm');
+            formData.append('ext', "." + FILE_TYPE);
             var xhr = new XMLHttpRequest();
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
