@@ -1,0 +1,29 @@
+{
+  "_id": "1234",
+  "time": "2016-11-17T18:12:35.113Z",
+  "presenter": {
+    "uPiwqzVf8kOgOhkgKS3AtrNBzMyc5ZT3CAkK": [
+      {
+        "time": "2016-11-17T18:12:45.114Z",
+        "_id": "979102bd-5460-4245-852c-6519c3d04640.webm"
+      },
+      {
+        "time": "2016-11-17T18:12:55.116Z",
+        "_id": "71fcdc6f-3f4d-44da-adca-ac8f7d1688cb.webm"
+      },
+      {
+        "time": "2016-11-17T18:12:59.303Z",
+        "_id": "19f03c50-ec43-4972-b28b-2b29bb14ccde.webm"
+      }
+    ]
+  },
+  "participants": {
+    "vYW6abMEoK6mvF4G9KePJ0kpOF2ZMHh2uJaS": [
+      {
+        "time": "2016-11-17T18:12:57.324Z",
+        "_id": "88f89a33-b9ad-4ae9-8d7f-80144e1b009f.webm",
+        "offset": "12.211"
+      }
+    ]
+  }
+}
