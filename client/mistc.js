@@ -563,9 +563,9 @@ if (Meteor.isClient) {
                     if (target[event['streamid']] === undefined) {
                         target[event['streamid']] = [];
                     }
-                    //only participants have offsets
+                    //only participants have offsets todo: the interval is NOT always MILLISECOND_INTERVAL
                     if (!isPresenter) {
-                        var msBefore = result.time.getTime() - _audioVideo.time.getTime();
+                        var msBefore = (result.time.getTime() - MILLISECOND_INTERVAL) - _audioVideo.time.getTime();
                         result['offset'] = (msBefore / 1000).toFixed(3);
                     }
                     //push new recording into list
