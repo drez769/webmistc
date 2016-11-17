@@ -496,6 +496,15 @@ if (Meteor.isClient) {
             document.getElementById('control-fluid').appendChild(event.mediaElement);
         };
         _connection.onstreamended = function (event) {
+            //Slightly modified default code
+            if (!event.mediaElement) {
+                event.mediaElement = document.getElementById(event.streamid);
+            }
+            if (event.mediaElement || event.mediaElement.parentNode) {
+                event.mediaElement.parentNode.removeChild(event.mediaElement);
+            }
+            //End default code
+
             var target;
             _mediaRecorderList.forEach(function(mediaRecorder, index) {
                 //find the matching recorder
