@@ -1,7 +1,6 @@
 import FileSaver from 'filesaverjs';
 import MediaStreamRecorder from 'msr';
 import StereoAudioRecorder from 'msr';
-import moment from 'moment'
 // wrong syntax
 // with brackets means exported variable of module
 // without brackets means entire module
@@ -187,10 +186,15 @@ if (Meteor.isClient) {
                     "presenter": {},
                     "participants": {}
                 };
+                var first = true;
                 _isRecording = true;
                 //this starts recording for every stream - local is always first
                 _mediaRecorderList.forEach(function (mediaRecorder) {
                     mediaRecorder.start(MILLISECOND_INTERVAL);
+                    if (first) {
+                        _audioVideo.time = new Date();
+                        first = false;
+                    }
                 });
             } else {
                 //this stops recording for every stream - local should be last
@@ -541,13 +545,9 @@ if (Meteor.isClient) {
         //this method is called every interval [the value passed to start()]
         mediaRecorder.ondataavailable = function (blob) {
             //the timestamp must be generated immediately to preserve the offset
-            var time = new Date();
             var result = {
-                'time': time
+                'time': new Date()
             };
-            if (_audioVideo.presenter[event['streamid']] === undefined) {
-                _audioVideo.time = result.time;
-            }
             //upload file to the server
             var formData = new FormData();
             formData.append('file', blob);
@@ -562,17 +562,11 @@ if (Meteor.isClient) {
                     //stream does not exist yet
                     if (target[event['streamid']] === undefined) {
                         target[event['streamid']] = [];
-                        //the first participant file has no offset
-                        if (!isPresenter) {
-                            result['offset'] = '0.000';
-                        }
                     }
-                    else {
-                        //subsequent participant files have an offset
-                        if (!isPresenter) {
-                            var timeBeforeDiff = moment(time).diff(moment(_audioVideo.time)) - MILLISECOND_INTERVAL;
-                            result['offset'] = (timeBeforeDiff / 1000).toFixed(3);
-                        }
+                    //only participants have offsets
+                    if (!isPresenter) {
+                        var msBefore = result.time.getTime() - _audioVideo.time.getTime();
+                        result['offset'] = (msBefore / 1000).toFixed(3);
                     }
                     //push new recording into list
                     target[event['streamid']].push(result);
