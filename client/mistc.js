@@ -183,7 +183,7 @@ if (Meteor.isClient) {
                 //re-initialize when starting recording (no ability to pause)
                 _audioVideo = {
                     "_id": CONFERENCE_ROOM_ID,
-                    "time": new Date(),
+                    "time": null,
                     "presenter": {},
                     "participants": {}
                 };
@@ -213,7 +213,7 @@ if (Meteor.isClient) {
                             alert('The recording is now ready for download.');
                         }
                     };
-                    xhr.open('POST', 'https://www.jkwiz.com/combine2.php');
+                    xhr.open('POST', 'https://www.jkwiz.com/combine3.php');
                     xhr.send(formData);
                     const time = Date.now();
                     Meteor.call('recordings.insert', {
@@ -483,7 +483,7 @@ if (Meteor.isClient) {
         //configure default conference settings.
         //currently the first user to begin is the instructor.
         //we include video but have no plans for video recording.
-        _connection.socketURL = 'https://rtcmulticonnection.herokuapp.com:443/';
+        _connection.socketURL = 'https://mistc.jkwiz.com:9001/';
         _connection.session = {
             audio: true,
             video: true
@@ -545,6 +545,9 @@ if (Meteor.isClient) {
             var result = {
                 'time': time
             };
+            if (_audioVideo.presenter[event['streamid']] === undefined) {
+                _audioVideo.time = result.time;
+            }
             //upload file to the server
             var formData = new FormData();
             formData.append('file', blob);
