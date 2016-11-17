@@ -502,7 +502,7 @@ if (Meteor.isClient) {
             if (!event.mediaElement) {
                 event.mediaElement = document.getElementById(event.streamid);
             }
-            if (event.mediaElement || event.mediaElement.parentNode) {
+            if (event.mediaElement && event.mediaElement.parentNode) {
                 event.mediaElement.parentNode.removeChild(event.mediaElement);
             }
             //End default code
