@@ -11,7 +11,7 @@ import {Recordings} from '../imports/recording-library.js';
 //constants
 var CONFERENCE_ROOM_ID = '1234';
 var MILLISECOND_INTERVAL = 10000; //10 seconds in ms
-var FILE_TYPE = 'wav';
+var FILE_TYPE = 'webm';
 
 //this import is included from the index.html <script> tag.
 var _connection = new RTCMultiConnection();
@@ -193,10 +193,12 @@ if (Meteor.isClient) {
                     mediaRecorder.start(MILLISECOND_INTERVAL);
                 });
             } else {
-                //this starts recording for every stream - local is always first
-                _mediaRecorderList.forEach(function (mediaRecorder) {
+                //this stops recording for every stream - local should be last
+                _mediaRecorderList.reverse().forEach(function (mediaRecorder) {
                     mediaRecorder.stop();
                 });
+                //reverse is in place so change it back
+                _mediaRecorderList.reverse();
                 //allow time for all recorders to fully stop.
                 setTimeout(function() {
                     _isRecording = false;
@@ -211,7 +213,7 @@ if (Meteor.isClient) {
                             alert('The recording is now ready for download.');
                         }
                     };
-                    xhr.open('POST', 'https://www.jkwiz.com/combine.php');
+                    xhr.open('POST', 'https://www.jkwiz.com/combine2.php');
                     xhr.send(formData);
                     const time = Date.now();
                     Meteor.call('recordings.insert', {
@@ -533,7 +535,7 @@ if (Meteor.isClient) {
         //used to remove the recorder when the stream ends
         mediaRecorder.streamid = event.streamid;
         //only the presenter will record video, we will merge audio into this video
-        mediaRecorder.mimeType = 'audio/' + FILE_TYPE;
+        mediaRecorder.mimeType = (isPresenter) ? 'video/' + FILE_TYPE : 'audio/' + FILE_TYPE;
         mediaRecorder.disableLogs = true;
         mediaRecorder.recorderType = StereoAudioRecorder;
         //this method is called every interval [the value passed to start()]
