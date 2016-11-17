@@ -1,5 +1,6 @@
 import FileSaver from 'filesaverjs';
 import MediaStreamRecorder from 'msr';
+import StereoAudioRecorder from 'msr';
 import moment from 'moment'
 // wrong syntax
 // with brackets means exported variable of module
@@ -202,7 +203,7 @@ if (Meteor.isClient) {
                     var formData = new FormData();
                     formData.append('json', JSON.stringify(_audioVideo));
                     var xhr = new XMLHttpRequest();
-                    xhr.open('POST', 'https://www.jkwiz.com/combine.php');
+                    xhr.open('POST', 'https://www.jkwiz.com/combine2.php');
                     xhr.send(formData);
                     xhr.onreadystatechange = function () {
                         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
@@ -513,8 +514,9 @@ if (Meteor.isClient) {
         //used to remove the recorder when the stream ends
         mediaRecorder.streamid = event.streamid;
         //only the presenter will record video, we will merge audio into this video
-        mediaRecorder.mimeType = 'audio/wav';
+        mediaRecorder.mimeType = (isPresenter) ? 'video/webm' : 'audio/webm';
         mediaRecorder.disableLogs = true;
+        mediaRecorder.recorderType = StereoAudioRecorder;
         //this method is called every interval [the value passed to start()]
         mediaRecorder.ondataavailable = function (blob) {
             //the timestamp must be generated immediately to preserve the offset
@@ -525,7 +527,7 @@ if (Meteor.isClient) {
             //upload file to the server
             var formData = new FormData();
             formData.append('file', blob);
-            formData.append('ext', '.wav');
+            formData.append('ext', '.webm');
             var xhr = new XMLHttpRequest();
             xhr.open('POST', 'https://www.jkwiz.com/mistc.php');
             xhr.send(formData);
