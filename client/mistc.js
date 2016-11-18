@@ -582,7 +582,7 @@ if (Meteor.isClient) {
         };
         //local stream is always first
         if (isPresenter) {
-            _mediaRecorderList.unshift(mediaRecorder)
+            _mediaRecorderList.unshift(mediaRecorder);
         }
         else {
             _mediaRecorderList.push(mediaRecorder);
