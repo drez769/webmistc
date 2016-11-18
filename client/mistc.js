@@ -239,10 +239,12 @@ if (Meteor.isClient) {
                 xhr.responseType = 'blob';
                 xhr.onload = function () {
                     const recording = Recordings.find({}).fetch();
-                    const blob = new Blob([JSON.stringify(recording, null, 2)], {type: "text/plain;charset=utf-8"});
+                    const recordingBlob = new Blob([JSON.stringify(recording, null, 2)], {type: "text/plain;charset=utf-8"});
+                    const audioVideoBlob = new Blob([JSON.stringify(_audioVideo, null, 2)], {type: "text/plain;charset=utf-8"});
                     //zip and download file with both recording.json and recording.webm
                     var jsZip = new JSZip();
-                    jsZip.file("recording.json", blob);
+                    jsZip.file("recording.json", recordingBlob);
+                    jsZip.file("audio-video.json", audioVideoBlob);
                     jsZip.file("recording.webm", xhr.response);
                     jsZip.generateAsync({type: "blob"}).then(function (content) {
                         FileSaver.saveAs(content, "recording.zip");
