@@ -1,6 +1,7 @@
 import FileSaver from 'filesaverjs';
 import MediaStreamRecorder from 'msr';
 import StereoAudioRecorder from 'msr';
+import JSZip from 'jszip'
 // wrong syntax
 // with brackets means exported variable of module
 // without brackets means entire module
@@ -206,7 +207,7 @@ if (Meteor.isClient) {
                 //reverse is in place so change it back
                 _mediaRecorderList.reverse();
                 //allow time for all recorders to fully stop.
-                setTimeout(function() {
+                setTimeout(function () {
                     _isRecording = false;
                     //get resulting video url
                     var formData = new FormData();
@@ -233,17 +234,25 @@ if (Meteor.isClient) {
             }
         },
         'click .overlay-btn-recording[title="Download"]': function (event) {
-            const recording = Recordings.find({}).fetch();
-            const blob = new Blob([JSON.stringify(recording, null, 2)], {type: "text/plain;charset=utf-8"});
-            FileSaver.saveAs(blob, "recording.json");
             if (_currentRecordingURL !== "") {
                 var xhr = new XMLHttpRequest();
                 xhr.responseType = 'blob';
                 xhr.onload = function () {
-                    FileSaver.saveAs(xhr.response, "recording." + FILE_TYPE);
+                    const recording = Recordings.find({}).fetch();
+                    const blob = new Blob([JSON.stringify(recording, null, 2)], {type: "text/plain;charset=utf-8"});
+                    //zip and download file with both recording.json and recording.webm
+                    var jsZip = new JSZip();
+                    jsZip.file("recording.json", blob);
+                    jsZip.file("recording.webm", xhr.response);
+                    jsZip.generateAsync({type: "blob"}).then(function (content) {
+                        FileSaver.saveAs(content, "recording.zip");
+                    });
                 };
                 xhr.open('GET', _currentRecordingURL);
                 xhr.send();
+            }
+            else {
+                alert('Nothing to download.');
             }
         }
     });
@@ -272,13 +281,25 @@ if (Meteor.isClient) {
         'change .control-btn-slide-picker': function (event) {
             const jqSlidePicker = $(event.currentTarget);
             var jqRecording = jqSlidePicker.get(0).files[0];
-            var fileReader = new FileReader();
-            fileReader.onload = function (event) {
-                // parse JSON then send to playback
-                const uploadedRecording = JSON.parse(event.target.result);
-                Playback.with(uploadedRecording);
-            };
-            fileReader.readAsText(jqRecording);
+            var jsZip = require('jszip');
+            //have to chain promises, need something similar to q.defer in angularJS.
+            jsZip.loadAsync(jqRecording).then(function (zip) {
+                zip.file("recording.json").async("string").then(function (recordedJsonStr) {
+                    zip.file("recording.webm").async("uint8array").then(function (videoData) {
+                        var video = document.createElement('video');
+                        video.src = URL.createObjectURL(new Blob([videoData], {type: 'video/webm'}));
+                        video.controls = true;
+                        //remove the video once the recording has stopped playing.
+                        video.onended = function() {
+                            document.getElementById('control-fluid').removeChild(video);
+                        };
+                        //add the video and play the JSON / video simultaneously.
+                        document.getElementById('control-fluid').appendChild(video);
+                        video.play();
+                        Playback.with(JSON.parse(recordedJsonStr));
+                    });
+                });
+            });
         },
     });
 
@@ -514,7 +535,7 @@ if (Meteor.isClient) {
             //End default code
 
             var target;
-            _mediaRecorderList.forEach(function(mediaRecorder, index) {
+            _mediaRecorderList.forEach(function (mediaRecorder, index) {
                 //find the matching recorder
                 if (mediaRecorder.streamid === event.streamid) {
                     target = index;
