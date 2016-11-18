@@ -1,7 +1,6 @@
 import FileSaver from 'filesaverjs';
 import MediaStreamRecorder from 'msr';
 import StereoAudioRecorder from 'msr';
-import moment from 'moment'
 // wrong syntax
 // with brackets means exported variable of module
 // without brackets means entire module
@@ -11,7 +10,7 @@ import {Recordings} from '../imports/recording-library.js';
 //constants
 var CONFERENCE_ROOM_ID = '1234';
 var MILLISECOND_INTERVAL = 10000; //10 seconds in ms
-var FILE_TYPE = 'wav';
+var FILE_TYPE = 'webm';
 
 //this import is included from the index.html <script> tag.
 var _connection = new RTCMultiConnection();
@@ -183,20 +182,29 @@ if (Meteor.isClient) {
                 //re-initialize when starting recording (no ability to pause)
                 _audioVideo = {
                     "_id": CONFERENCE_ROOM_ID,
-                    "time": new Date(),
+                    "time": null,
                     "presenter": {},
                     "participants": {}
                 };
+                var first = true;
                 _isRecording = true;
                 //this starts recording for every stream - local is always first
                 _mediaRecorderList.forEach(function (mediaRecorder) {
                     mediaRecorder.start(MILLISECOND_INTERVAL);
+                    mediaRecorder.startTime = new Date();
+                    //the first is the local stream, this constant ID's when we started recording
+                    if (first) {
+                        _audioVideo.time = mediaRecorder.startTime;
+                        first = false;
+                    }
                 });
             } else {
-                //this starts recording for every stream - local is always first
-                _mediaRecorderList.forEach(function (mediaRecorder) {
+                //this stops recording for every stream - local should be last
+                _mediaRecorderList.reverse().forEach(function (mediaRecorder) {
                     mediaRecorder.stop();
                 });
+                //reverse is in place so change it back
+                _mediaRecorderList.reverse();
                 //allow time for all recorders to fully stop.
                 setTimeout(function() {
                     _isRecording = false;
@@ -211,7 +219,7 @@ if (Meteor.isClient) {
                             alert('The recording is now ready for download.');
                         }
                     };
-                    xhr.open('POST', 'https://www.jkwiz.com/combine.php');
+                    xhr.open('POST', 'https://www.jkwiz.com/combine3.php');
                     xhr.send(formData);
                     const time = Date.now();
                     Meteor.call('recordings.insert', {
@@ -481,7 +489,7 @@ if (Meteor.isClient) {
         //configure default conference settings.
         //currently the first user to begin is the instructor.
         //we include video but have no plans for video recording.
-        _connection.socketURL = 'https://rtcmulticonnection.herokuapp.com:443/';
+        _connection.socketURL = 'https://mistc.jkwiz.com:9001/';
         _connection.session = {
             audio: true,
             video: true
@@ -500,7 +508,7 @@ if (Meteor.isClient) {
             if (!event.mediaElement) {
                 event.mediaElement = document.getElementById(event.streamid);
             }
-            if (event.mediaElement || event.mediaElement.parentNode) {
+            if (event.mediaElement && event.mediaElement.parentNode) {
                 event.mediaElement.parentNode.removeChild(event.mediaElement);
             }
             //End default code
@@ -533,16 +541,18 @@ if (Meteor.isClient) {
         //used to remove the recorder when the stream ends
         mediaRecorder.streamid = event.streamid;
         //only the presenter will record video, we will merge audio into this video
-        mediaRecorder.mimeType = 'audio/' + FILE_TYPE;
+        mediaRecorder.mimeType = (isPresenter) ? 'video/' + FILE_TYPE : 'audio/' + FILE_TYPE;
         mediaRecorder.disableLogs = true;
         mediaRecorder.recorderType = StereoAudioRecorder;
         //this method is called every interval [the value passed to start()]
         mediaRecorder.ondataavailable = function (blob) {
             //the timestamp must be generated immediately to preserve the offset
-            var time = new Date();
             var result = {
-                'time': time
+                'time': new Date()
             };
+            //the interval is NOT always exactly MILLISECOND_INTERVAL
+            var runTimeMs = result.time.getTime() - mediaRecorder.startTime.getTime();
+            mediaRecorder.startTime = result.time;
             //upload file to the server
             var formData = new FormData();
             formData.append('file', blob);
@@ -557,17 +567,11 @@ if (Meteor.isClient) {
                     //stream does not exist yet
                     if (target[event['streamid']] === undefined) {
                         target[event['streamid']] = [];
-                        //the first participant file has no offset
-                        if (!isPresenter) {
-                            result['offset'] = '0.000';
-                        }
                     }
-                    else {
-                        //subsequent participant files have an offset
-                        if (!isPresenter) {
-                            var timeBeforeDiff = moment(time).diff(moment(_audioVideo.time)) - MILLISECOND_INTERVAL;
-                            result['offset'] = (timeBeforeDiff / 1000).toFixed(3);
-                        }
+                    //only participants have offsets
+                    if (!isPresenter) {
+                        var msBefore = (result.time.getTime() - runTimeMs) - _audioVideo.time.getTime();
+                        result['offset'] = (msBefore / 1000).toFixed(3);
                     }
                     //push new recording into list
                     target[event['streamid']].push(result);
@@ -578,7 +582,7 @@ if (Meteor.isClient) {
         };
         //local stream is always first
         if (isPresenter) {
-            _mediaRecorderList.unshift(mediaRecorder)
+            _mediaRecorderList.unshift(mediaRecorder);
         }
         else {
             _mediaRecorderList.push(mediaRecorder);
@@ -586,6 +590,7 @@ if (Meteor.isClient) {
         //someone has joined an existing session that is already in progress
         if (_isRecording) {
             mediaRecorder.start(MILLISECOND_INTERVAL);
+            mediaRecorder.startTime = new Date();
         }
     }
 

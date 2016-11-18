@@ -125,19 +125,20 @@
 }
 
 #control-fluid {
-    width: calc(110vw - 300px - 110px);
+    width: 100%;
+    min-width: 164px;
     height: 100px;
     position: fixed;
-    bottom: 0px;
-    left: 560px;
+    bottom: 0;
+    left: 580px;
     background-color: cadetblue;
+    overflow-y: hidden;
+    overflow-x: auto;
 }
 
 #control-fluid video, #control-fluid audio {
-    width: 200px;
     height: 100%;
-    overflow-y: hidden;
-    overflow-x: auto;
+    margin: 0 3px;
 }
 
 #question-panel {
