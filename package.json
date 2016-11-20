@@ -1,22 +1,24 @@
 {
   "name": "webmistc",
-  "version": "1.0.0",
-  "description": "Simulteaching tool",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/dvoegeli/webmistc.git"
-  },
-  "author": "",
-  "license": "ISC",
+  "description": "Simulteaching Tool",
+  "version": "1.0.1",
+  "author": "Dorian Voegeli",
   "bugs": {
     "url": "https://github.com/dvoegeli/webmistc/issues"
   },
-  "homepage": "https://github.com/dvoegeli/webmistc",
+  "contributors": [
+    {
+      "name": "Joshua Williams"
+    },
+    {
+      "name": "Richard Stibbards"
+    },
+    {
+      "name": "Andrez Andrade"
+    }
+  ],
   "dependencies": {
+    "babel-runtime": "^6.18.0",
     "bcrypt": "^0.8.7",
     "filesaverjs": "^0.2.2",
     "jquery": "^2.2.4",
@@ -25,5 +27,25 @@
     "meteor-node-stubs": "^0.2.3",
     "msr": "^1.3.4",
     "rtcmulticonnection-v3": "^3.4.2"
+  },
+  "homepage": "https://github.com/dvoegeli/webmistc",
+  "keywords": [
+    "college",
+    "education",
+    "school",
+    "simulteaching",
+    "teaching",
+    "university"
+  ],
+  "license": "ISC",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dvoegeli/webmistc.git"
+  },
+  "scripts": {
+    "postinstall": "meteor npm install --save bcrypt",
+    "preinstall": "curl https://install.meteor.com | /bin/sh",
+    "start": "meteor"
   }
 }
