@@ -6,6 +6,8 @@ export var Playback = {};
 
 //HACK: scope binding
 const self = this;
+let timings = [];
+let recordings = "";
 
 // HACK: need to figure out the proper scoping to 
 // access this from the overlay library
@@ -34,11 +36,12 @@ function removeTimes(recordings) {
     return recordings;
 }
 
-Playback.with = function (recordings) {
+/*Playback.with = function (recordings) {
+    const upload = recordings;
     initTimes(recordings);
     recordings = removeTimes(recordings);
     _.each(recordings, function (recording) {
-        Meteor.setTimeout(
+        timings.push(Meteor.setTimeout(
             function () {
                 switch (recording.state) {
                     case 'session':
@@ -57,6 +60,56 @@ Playback.with = function (recordings) {
                 }
             },
             ( parseInt(recording.time - self.start) )
-        );
+        ));
+    });
+}*/
+
+Playback.upload = function (json) {
+    recordings = json;
+}
+
+Playback.skipBack = function () {
+
+}
+
+Playback.stop = function () {
+    _.each(timings, function(timing){
+        Meteor.clearTimeout(timing)
+    })
+}
+
+Playback.pause = function () {
+
+}
+
+Playback.play = function () {
+    initTimes(recordings);
+    recordings = removeTimes(recordings);
+    _.each(recordings, function (recording) {
+        timings.push(Meteor.setTimeout(
+            function () {
+                switch (recording.state) {
+                    case 'session':
+                        const sessionState = recording.params[0];
+                        Session.set(recording.action, sessionState);
+                        break;
+                    case 'database':
+                        const isReplaceOn = Session.get('overlay.tool.replace');
+                        if (isReplaceOn) {
+                            const title = recording.params[0];
+                            const page = recording.params[1];
+                            replaceNote('previous', title, page);
+                        }
+                        Meteor.apply(recording.action, recording.params);
+                        break;
+                }
+            },
+            ( parseInt(recording.time - self.start) )
+        ));
     });
 }
+
+Playback.skipForward = function () {
+
+}
+
