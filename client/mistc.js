@@ -18,6 +18,7 @@ var _connection = new RTCMultiConnection();
 var _mediaRecorderList = [];
 var _audioVideo = {};
 var _isRecording = false;
+var isMuted = false; // Toggle for muting/unmuting audio and video stream
 var _currentRecordingURL = "";
 
 if (Meteor.isClient) {
@@ -558,9 +559,34 @@ if (Meteor.isClient) {
             }
         });
     });
+	
+	/*
+	*/
+	$(document).ready(function() {
+		$('#muteButton').click(function() {
+			if (isMuted) {
+				if (localStream.getAudioTracks()[0]) localStream.getAudioTracks()[0].enabled = true;
+				if (localStream.getVideoTracks()[0]) localStream.getVideoTracks()[0].enabled = true;
+				_connection.streamEvents[localMediaRecorder.streamid].stream.unmute('both');
+			}
+			else {
+				if (localStream.getAudioTracks()[0]) localStream.getAudioTracks()[0].enabled = false;
+				if (localStream.getVideoTracks()[0]) localStream.getVideoTracks()[0].enabled = false;
+				_connection.streamEvents[localMediaRecorder.streamid].stream.mute('both');
+			}
+			isMuted = !isMuted;
+		});
+	});
+	
 
     function startStream(event, isPresenter) {
         var mediaRecorder = new MediaStreamRecorder(event.stream);
+		
+		// Save reference to the local media stream recorder and stream (user's stream of themself)
+		if (isPresenter) {
+			localMediaRecorder = mediaRecorder;
+			localStream = event.stream;
+		}
         //used to remove the recorder when the stream ends
         mediaRecorder.streamid = event.streamid;
         //only the presenter will record video, we will merge audio into this video
