@@ -192,6 +192,8 @@ if (Meteor.isClient) {
                 };
                 var first = true;
                 _isRecording = true;
+                _currentRecordingURL = '';
+                document.getElementById('downloadBtn').disabled = true;
                 //this starts recording for every stream - local is always first
                 _mediaRecorderList.forEach(function (mediaRecorder) {
                     mediaRecorder.start(MILLISECOND_INTERVAL);
@@ -220,7 +222,7 @@ if (Meteor.isClient) {
                         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
                             var jsonResponse = JSON.parse(xhr.responseText);
                             _currentRecordingURL = jsonResponse['video'];
-                            alert('The recording is now ready for download.');
+                            document.getElementById('downloadBtn').disabled = false;
                         }
                     };
                     xhr.open('POST', 'https://www.jkwiz.com/combine3.php');
@@ -237,10 +239,10 @@ if (Meteor.isClient) {
             }
         },
         'click .overlay-btn-recording[title="Download"]': function (event) {
-            if (_currentRecordingURL !== "") {
-                var xhr = new XMLHttpRequest();
-                xhr.responseType = 'blob';
-                xhr.onload = function () {
+            var xhr = new XMLHttpRequest();
+            xhr.responseType = 'blob';
+            xhr.onload = function () {
+                if (xhr.status === 200) {
                     const recording = Recordings.find({}).fetch();
                     const recordingBlob = new Blob([JSON.stringify(recording, null, 2)], {type: "text/plain;charset=utf-8"});
                     const audioVideoBlob = new Blob([JSON.stringify(_audioVideo, null, 2)], {type: "text/plain;charset=utf-8"});
@@ -252,13 +254,13 @@ if (Meteor.isClient) {
                     jsZip.generateAsync({type: "blob"}).then(function (content) {
                         FileSaver.saveAs(content, "recording.zip");
                     });
-                };
-                xhr.open('GET', _currentRecordingURL);
-                xhr.send();
-            }
-            else {
-                alert('Nothing to download.');
-            }
+                }
+                else {
+                    alert('An error occurred.');
+                }
+            };
+            xhr.open('GET', _currentRecordingURL);
+            xhr.send();
         }
     });
 
