@@ -9,24 +9,21 @@ import {Playback} from '../imports/playback-library.js';
 import {Recordings} from '../imports/recording-library.js';
 
 //constants
-var CONFERENCE_ROOM_ID = '1234';
-var MILLISECOND_INTERVAL = 10000; //10 seconds in ms
-var FILE_TYPE = 'webm';
+let CONFERENCE_ROOM_ID = '1234';
+let MILLISECOND_INTERVAL = 10000; //10 seconds in ms
+let FILE_TYPE = 'webm';
 
 //this import is included from the index.html <script> tag.
-var _connection = new RTCMultiConnection();
-var localMediaRecorder; //MediaStreamRecorder for 'this' user
-var localStream; //Stream for 'this' user
-var _mediaRecorderList = [];
-var _audioVideo = {};
-var _isRecording = false;
-var isMuted = false; // Toggle for muting/unmuting audio and video stream
-var _currentRecordingURL = "";
+let _connection = new RTCMultiConnection();
+let _mediaRecorderList = [];
+let _audioVideo = {};
+let _isRecording = false;
+let _currentRecordingURL = "";
 
 if (Meteor.isClient) {
     // libraries
-    var overlayLibrary;
-    var slideLibrary;
+    let overlayLibrary;
+    let slideLibrary;
 
     // Startup
     Meteor.startup(function () {
@@ -36,10 +33,10 @@ if (Meteor.isClient) {
 
         // slides
         Meteor.subscribe('slidesCollection', function () {
-            var url = '/slides/' + slideLibrary.title() + '.pdf';
+            let url = '/slides/' + slideLibrary.title() + '.pdf';
             PDFJS.getDocument(url).then(function (slide) {
                 slideLibrary.set(slide);
-                var slideDocument = SlidesCollection.find({_id: slideLibrary.title()}).fetch()[0];
+                let slideDocument = SlidesCollection.find({_id: slideLibrary.title()}).fetch()[0];
                 if (!slideDocument) {
                     Session.set('slide.page', 'first');
                     SlidesCollection.insert({_id: slideLibrary.title(), page: slideLibrary.getPage('first')});
@@ -51,7 +48,7 @@ if (Meteor.isClient) {
         });
         // presentations
         Meteor.subscribe('presentations', function () {
-            var hasPresentations = Presentations.find({}).count() > 0;
+            let hasPresentations = Presentations.find({}).count() > 0;
             if (!hasPresentations) {
                 Presentations.insert({
                     _id: slideLibrary.title() + ( Session.get('slide.page') || slideLibrary.getPage('first') ),
@@ -70,7 +67,7 @@ if (Meteor.isClient) {
 
         Tracker.autorun(function () {
             // slides
-            var slideDocument = SlidesCollection.find({_id: slideLibrary.title()}).fetch()[0];
+            let slideDocument = SlidesCollection.find({_id: slideLibrary.title()}).fetch()[0];
             if (slideDocument && slideLibrary) {
                 Session.set('slide.page', slideDocument.page);
                 slideLibrary.render(slideDocument.page);
@@ -79,7 +76,7 @@ if (Meteor.isClient) {
 
         Tracker.autorun(function () {
             // overlay
-            var data = Presentations.find({_id: slideLibrary.title() + Session.get('slide.page')}).fetch()
+            let data = Presentations.find({_id: slideLibrary.title() + Session.get('slide.page')}).fetch()
             if (data.length) {
                 data = data[0].overlay;
             }
@@ -108,7 +105,7 @@ if (Meteor.isClient) {
 
     Template.slideNavPanel.events({
         'click .slide-nav-option': function (event) {
-            var number = $(event.currentTarget).attr('data-slide');
+            let number = $(event.currentTarget).attr('data-slide');
             slideLibrary.setPage(number);
         }
     });
@@ -121,24 +118,24 @@ if (Meteor.isClient) {
             });
         },
         'click .overlay-btn-tool': function (event) {
-            var tool = $(event.currentTarget).attr('data-tool');
+            let tool = $(event.currentTarget).attr('data-tool');
             changeTool(tool);
         },
         'click .overlay-btn-color': function (event) {
-            var color = $(event.currentTarget).attr('data-color');
+            let color = $(event.currentTarget).attr('data-color');
             Session.set('overlay.color', color);
         },
         'click .overlay-btn-size': function (event) {
-            var size = $(event.currentTarget).attr('data-size');
+            let size = $(event.currentTarget).attr('data-size');
             Session.set('overlay.size.outline', size);
         },
         'click .overlay-btn-text': function (event) {
-            var text = $(event.currentTarget).attr('data-size');
+            let text = $(event.currentTarget).attr('data-size');
             Session.set('overlay.size.font', text);
         },
         'click .overlay-btn-sticky-replace > .toggle': function (event) {
-            var stickyMode = $(event.currentTarget).hasClass('off');
-            var replaceMode = !stickyMode;
+            let stickyMode = $(event.currentTarget).hasClass('off');
+            let replaceMode = !stickyMode;
             Session.set('overlay.tool.replace', replaceMode);
             if (Session.get('recording.happening')) {
                 Meteor.call('recordings.insert', {
@@ -151,8 +148,8 @@ if (Meteor.isClient) {
         },
         'click .overlay-btn-recording[title="Recording"]': function (event) {
             $(event.currentTarget).toggleClass('on');
-            var recordingMode = $(event.currentTarget).hasClass('on');
-            var color = recordingMode ? 'crimson' : '';
+            let recordingMode = $(event.currentTarget).hasClass('on');
+            let color = recordingMode ? 'crimson' : '';
             $(event.currentTarget).css("color", color);
             Session.set('overlay.tool.recording', recordingMode);
             Session.set('recording.happening', recordingMode);
@@ -190,7 +187,7 @@ if (Meteor.isClient) {
                     "presenter": {},
                     "participants": {}
                 };
-                var first = true;
+                let first = true;
                 _isRecording = true;
                 _currentRecordingURL = '';
                 document.getElementById('downloadBtn').disabled = true;
@@ -215,14 +212,19 @@ if (Meteor.isClient) {
                 setTimeout(function () {
                     _isRecording = false;
                     //get resulting video url
-                    var formData = new FormData();
+                    let formData = new FormData();
                     formData.append('json', JSON.stringify(_audioVideo));
-                    var xhr = new XMLHttpRequest();
+                    let xhr = new XMLHttpRequest();
                     xhr.onreadystatechange = function () {
-                        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-                            var jsonResponse = JSON.parse(xhr.responseText);
-                            _currentRecordingURL = jsonResponse['video'];
-                            document.getElementById('downloadBtn').disabled = false;
+                        if (xhr.readyState === XMLHttpRequest.DONE) {
+                            if (xhr.status === 200) {
+                                let jsonResponse = JSON.parse(xhr.responseText);
+                                _currentRecordingURL = jsonResponse['video'];
+                                document.getElementById('downloadBtn').disabled = false;
+                            }
+                            else {
+                                alert('A error occurred while trying to create the recording.');
+                            }
                         }
                     };
                     xhr.open('POST', 'https://www.jkwiz.com/combine3.php');
@@ -239,24 +241,26 @@ if (Meteor.isClient) {
             }
         },
         'click .overlay-btn-recording[title="Download"]': function (event) {
-            var xhr = new XMLHttpRequest();
+            let xhr = new XMLHttpRequest();
             xhr.responseType = 'blob';
-            xhr.onload = function () {
-                if (xhr.status === 200) {
-                    const recording = Recordings.find({}).fetch();
-                    const recordingBlob = new Blob([JSON.stringify(recording, null, 2)], {type: "text/plain;charset=utf-8"});
-                    const audioVideoBlob = new Blob([JSON.stringify(_audioVideo, null, 2)], {type: "text/plain;charset=utf-8"});
-                    //zip and download file with both recording.json and recording.webm
-                    var jsZip = new JSZip();
-                    jsZip.file("recording.json", recordingBlob);
-                    jsZip.file("audio-video.json", audioVideoBlob);
-                    jsZip.file("recording.webm", xhr.response);
-                    jsZip.generateAsync({type: "blob"}).then(function (content) {
-                        FileSaver.saveAs(content, "recording.zip");
-                    });
-                }
-                else {
-                    alert('An error occurred.');
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        const recording = Recordings.find({}).fetch();
+                        const recordingBlob = new Blob([JSON.stringify(recording, null, 2)], {type: "application/json;charset=utf-8"});
+                        const audioVideoBlob = new Blob([JSON.stringify(_audioVideo, null, 2)], {type: "application/json;charset=utf-8"});
+                        //zip and download file with both recording.json and recording.webm
+                        let jsZip = new JSZip();
+                        jsZip.file("recording.json", recordingBlob);
+                        jsZip.file("audio-video.json", audioVideoBlob);
+                        jsZip.file("recording.webm", xhr.response);
+                        jsZip.generateAsync({type: "blob"}).then(function (content) {
+                            FileSaver.saveAs(content, "recording.zip");
+                        });
+                    }
+                    else {
+                        alert('An error occurred while trying to download the recording.');
+                    }
                 }
             };
             xhr.open('GET', _currentRecordingURL);
@@ -287,24 +291,23 @@ if (Meteor.isClient) {
         },
         'change .control-btn-slide-picker': function (event) {
             const jqSlidePicker = $(event.currentTarget);
-            var jqRecording = jqSlidePicker.get(0).files[0];
-            var jsZip = require('jszip');
+            let jqRecording = jqSlidePicker.get(0).files[0];
+            let jsZip = require('jszip');
             //have to chain promises, need something similar to q.defer in angularJS.
             jsZip.loadAsync(jqRecording).then(function (zip) {
                 zip.file("recording.json").async("string").then(function (recordedJsonStr) {
                     zip.file("recording.webm").async("uint8array").then(function (videoData) {
-                        var video = document.createElement('video');
+                        let video = document.createElement('video');
                         video.src = URL.createObjectURL(new Blob([videoData], {type: 'video/webm'}));
                         video.controls = true;
                         //remove the video once the recording has stopped playing.
-                        video.onended = function() {
+                        video.onended = function () {
                             document.getElementById('control-fluid').removeChild(video);
                         };
                         //add the video and play the JSON / video simultaneously.
                         document.getElementById('control-fluid').appendChild(video);
                         video.id = 'uploadedRecording';
                         video.play();
-
                         Playback.upload(JSON.parse(recordedJsonStr));
                         Playback.play();
                     });
@@ -312,29 +315,29 @@ if (Meteor.isClient) {
             });
         },
         'click .btn-skip-back': function () {
-            var video = document.getElementById('uploadedRecording');
+            let video = document.getElementById('uploadedRecording');
             video.currentTime = video.currentTime - 5;
             Playback.skipBack();
 
         },
         'click .btn-stop': function () {
-            var video = document.getElementById('uploadedRecording');
+            let video = document.getElementById('uploadedRecording');
             video.currentTime = 0;
             video.pause();
             Playback.stop();
         },
         'click .btn-pause': function () {
-            var video = document.getElementById('uploadedRecording');
+            let video = document.getElementById('uploadedRecording');
             video.pause();
             Playback.pause();
         },
         'click .btn-play': function () {
-            var video = document.getElementById('uploadedRecording');
+            let video = document.getElementById('uploadedRecording');
             video.play();
             Playback.play();
         },
         'click .btn-skip-forward': function () {
-            var video = document.getElementById('uploadedRecording');
+            let video = document.getElementById('uploadedRecording');
             video.currentTime = video.currentTime + 5;
             Playback.skipForward();
         },
@@ -361,17 +364,17 @@ if (Meteor.isClient) {
             if (!Meteor.userId()) {
                 throw new Meteor.Error('not-authorized');
             }
-            var $input = $(event.target);
-            var enterKey = 13; // 13 is the enter key event
+            let $input = $(event.target);
+            let enterKey = 13; // 13 is the enter key event
             if (event.which === enterKey) {
                 if (Meteor.user()) {
-                    var name = Meteor.user().username;
+                    let name = Meteor.user().username;
                 } else {
-                    var name = 'Anonymous';
+                    let name = 'Anonymous';
                 }
                 if ($input.val() != '') {
-                    var timestamp = Date.now().toString();
-                    var message = $input.val();
+                    let timestamp = Date.now().toString();
+                    let message = $input.val();
                     Meteor.call('messages.new', name, message, timestamp);
                     Meteor.call('recordings.insert', {
                         state: 'database',
@@ -381,7 +384,7 @@ if (Meteor.isClient) {
                     });
                     $input.val('');
                 }
-                var $messages = $('#chat-panel');
+                let $messages = $('#chat-panel');
                 $messages.scrollTop($messages[0].scrollHeight);
             }
         }
@@ -390,10 +393,10 @@ if (Meteor.isClient) {
     Template.chatPanel.events({
         // very ugly parent nesting, needs some TLC
         'click .glyphicon-star': function (event) {
-            var $target = $(event.currentTarget);
-            var name = $target.parent().parent().attr('data-name');
-            var message = $target.parent().text().trim();
-            var timestamp = $target.parent().parent().attr('data-time');
+            let $target = $(event.currentTarget);
+            let name = $target.parent().parent().attr('data-name');
+            let message = $target.parent().text().trim();
+            let timestamp = $target.parent().parent().attr('data-time');
             Meteor.call('moveToQuestionPanel', name, message, timestamp);
             Meteor.call('recordings.insert', {
                 state: 'database',
@@ -407,9 +410,9 @@ if (Meteor.isClient) {
     Template.questionPanel.events({
         // very ugly parent nesting, needs some TLC
         'click .glyphicon-remove': function (event) {
-            var $target = $(event.currentTarget);
-            var timestamp = $target.parent().parent().attr('data-time');
-            var question = Questions.find({time: timestamp}).fetch()[0];
+            let $target = $(event.currentTarget);
+            let timestamp = $target.parent().parent().attr('data-time');
+            let question = Questions.find({time: timestamp}).fetch()[0];
             Meteor.call('moveToChatPanel', question.name, question.message, question.time);
             Meteor.call('recordings.insert', {
                 state: 'database',
@@ -422,18 +425,18 @@ if (Meteor.isClient) {
 
     // Overlay
     function changeTool(_tool) {
-        var tool = _tool;
-        var cursor = $('[data-tool="' + tool + '"]').attr('data-cursor');
+        let tool = _tool;
+        let cursor = $('[data-tool="' + tool + '"]').attr('data-cursor');
         Session.set('overlay.tool', tool);
         Session.set('overlay.cursor', cursor);
         changeCursor();
     }
 
     function changeCursor() {
-        var cursor = Session.get('overlay.cursor');
-        var tool = Session.get('overlay.tool');
-        var color = _.isEqual(tool, 'erase') ? 'LightCoral' : Session.get('overlay.color');
-        var rotation = ( _.isEqual(tool, 'line') || _.isEqual(tool, 'arrow') ) ? -45 : 0;
+        let cursor = Session.get('overlay.cursor');
+        let tool = Session.get('overlay.tool');
+        let color = _.isEqual(tool, 'erase') ? 'LightCoral' : Session.get('overlay.color');
+        let rotation = ( _.isEqual(tool, 'line') || _.isEqual(tool, 'arrow') ) ? -45 : 0;
         $('#overlay').awesomeCursor(cursor, {
             color: color,
             rotate: rotation
@@ -471,43 +474,43 @@ if (Meteor.isClient) {
 
         // press - and = to cycle through colors
         key('-', 'keyboard-shortcuts', function () {
-            var color = overlayLibrary.cycleLeftToolColor();
+            let color = overlayLibrary.cycleLeftToolColor();
             Session.set('overlay.color', color);
             changeCursor();
         });
         key('=', 'keyboard-shortcuts', function () {
-            var color = overlayLibrary.cycleRightToolColor();
+            let color = overlayLibrary.cycleRightToolColor();
             Session.set('overlay.color', color);
             changeCursor();
         });
 
         // press _ and + to cycle through sizes
         key('shift+-', 'keyboard-shortcuts', function () {
-            var hasSelectedTextTool = _.isEqual(Session.get('overlay.tool'), 'text');
+            let hasSelectedTextTool = _.isEqual(Session.get('overlay.tool'), 'text');
             if (hasSelectedTextTool) {
-                var fontSize = overlayLibrary.cycleLeftTextSize();
+                let fontSize = overlayLibrary.cycleLeftTextSize();
                 Session.set('overlay.size.font', fontSize);
             } else {
-                var outlineSize = overlayLibrary.cycleLeftToolSize();
+                let outlineSize = overlayLibrary.cycleLeftToolSize();
                 Session.set('overlay.size.outline', outlineSize);
             }
         });
         key('shift+=', 'keyboard-shortcuts', function () {
-            var hasSelectedTextTool = _.isEqual(Session.get('overlay.tool'), 'text');
+            let hasSelectedTextTool = _.isEqual(Session.get('overlay.tool'), 'text');
             if (hasSelectedTextTool) {
-                var fontSize = overlayLibrary.cycleRightTextSize();
+                let fontSize = overlayLibrary.cycleRightTextSize();
                 Session.set('overlay.size.font', fontSize);
             } else {
-                var outlineSize = overlayLibrary.cycleRightToolSize();
+                let outlineSize = overlayLibrary.cycleRightToolSize();
                 Session.set('overlay.size.outline', outlineSize);
             }
         });
 
         // press ENTER to store new textbox
         key('enter', 'text-entry', function () {
-            var jqTextInput = $('.annotation-text-input.annotation-text-active').first();
-            var isReplaceOn = Session.get('overlay.tool.replace');
-            var isUsingEraser = _.isEqual(Session.get('overlay.tool'), 'erase');
+            let jqTextInput = $('.annotation-text-input.annotation-text-active').first();
+            let isReplaceOn = Session.get('overlay.tool.replace');
+            let isUsingEraser = _.isEqual(Session.get('overlay.tool'), 'erase');
             overlayLibrary.removeActiveText();
             key.filter = key.filters['all'];
             key.setScope('keyboard-shortcuts');
@@ -528,17 +531,17 @@ if (Meteor.isClient) {
 
     key.filters = {
         'all': function filter(event) {
-            var tagName = (event.target || event.srcElement).tagName;
+            let tagName = (event.target || event.srcElement).tagName;
             // ignore keypressed in any elements that support keyboard data input
             return !(tagName == 'INPUT' || tagName == 'SELECT' || tagName == 'TEXTAREA');
         },
         'keyboard-shortcuts': function filter(event) {
-            var tagName = (event.target || event.srcElement).tagName;
+            let tagName = (event.target || event.srcElement).tagName;
             // ignore keypressed in any elements that support keyboard data input
             return !(tagName == 'INPUT' || tagName == 'SELECT' || tagName == 'TEXTAREA');
         },
         'text-entry': function filter(event) {
-            var tagName = (event.target || event.srcElement).tagName;
+            let tagName = (event.target || event.srcElement).tagName;
             return (tagName === 'SPAN');
         }
     };
@@ -570,8 +573,7 @@ if (Meteor.isClient) {
                 event.mediaElement.parentNode.removeChild(event.mediaElement);
             }
             //End default code
-
-            var target;
+            let target;
             _mediaRecorderList.forEach(function (mediaRecorder, index) {
                 //find the matching recorder
                 if (mediaRecorder.streamid === event.streamid) {
@@ -592,38 +594,36 @@ if (Meteor.isClient) {
                 _connection.open(CONFERENCE_ROOM_ID);
             }
         });
+        //mute toggle button for muting/unmuting. Should work for the live stream and recording.
+        document.getElementById('muteButton').onclick = function() {
+            //implicit this object refers to the getElementById object.
+            if (_mediaRecorderList.length > 0) {
+                let streamObject = _connection.streamEvents[_mediaRecorderList[0].streamid];
+                //the first stream in the list is always the local stream, but we check here anyway.
+                if (streamObject.type === 'local') {
+                    if (streamObject.stream.getAudioTracks()[0]) {
+                        streamObject.stream.getAudioTracks()[0].enabled =
+                            !streamObject.stream.getAudioTracks()[0].enabled;
+                    }
+                    if (streamObject.stream.getVideoTracks()[0]) {
+                        streamObject.stream.getVideoTracks()[0].enabled =
+                            !streamObject.stream.getVideoTracks()[0].enabled;
+                    }
+                    if (streamObject.stream.getAudioTracks()[0].enabled) {
+                        streamObject.stream.unmute('both');
+                        this.innerHTML = 'Mute';
+                    }
+                    else {
+                        streamObject.stream.mute('both');
+                        this.innerHTML = 'Unmute';
+                    }
+                }
+            }
+        }
     });
-	
-	/*
-	* Mute toggle button for muting/unmuting. Should work for the live stream and recording
-	*/
-	$(document).ready(function() {
-		$('#muteButton').click(function() {
-			// mute audio and/or video (whatever is being streamed) for the stream 
-			// (to prevent saved recording) and the connection (to disable stream UI)
-			if (isMuted) {
-				if (localStream.getAudioTracks()[0]) localStream.getAudioTracks()[0].enabled = true;
-				if (localStream.getVideoTracks()[0]) localStream.getVideoTracks()[0].enabled = true;
-				_connection.streamEvents[localMediaRecorder.streamid].stream.unmute('both');
-			}
-			else {
-				if (localStream.getAudioTracks()[0]) localStream.getAudioTracks()[0].enabled = false;
-				if (localStream.getVideoTracks()[0]) localStream.getVideoTracks()[0].enabled = false;
-				_connection.streamEvents[localMediaRecorder.streamid].stream.mute('both');
-			}
-			isMuted = !isMuted;
-		});
-	});
-	
 
     function startStream(event, isPresenter) {
-        var mediaRecorder = new MediaStreamRecorder(event.stream);
-		
-		// Save reference to the local media stream recorder and stream (user's stream of themself)
-		if (isPresenter) {
-			localMediaRecorder = mediaRecorder;
-			localStream = event.stream;
-		}
+        let mediaRecorder = new MediaStreamRecorder(event.stream);
         //used to remove the recorder when the stream ends
         mediaRecorder.streamid = event.streamid;
         //only the presenter will record video, we will merge audio into this video
@@ -633,21 +633,21 @@ if (Meteor.isClient) {
         //this method is called every interval [the value passed to start()]
         mediaRecorder.ondataavailable = function (blob) {
             //the timestamp must be generated immediately to preserve the offset
-            var result = {
+            let result = {
                 'time': new Date()
             };
             //the interval is NOT always exactly MILLISECOND_INTERVAL
-            var runTimeMs = result.time.getTime() - mediaRecorder.startTime.getTime();
+            let runTimeMs = result.time.getTime() - mediaRecorder.startTime.getTime();
             mediaRecorder.startTime = result.time;
             //upload file to the server
-            var formData = new FormData();
+            let formData = new FormData();
             formData.append('file', blob);
             formData.append('ext', "." + FILE_TYPE);
-            var xhr = new XMLHttpRequest();
+            let xhr = new XMLHttpRequest();
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-                    var target = (isPresenter) ? _audioVideo.presenter : _audioVideo.participants;
-                    var jsonResponse = JSON.parse(xhr.responseText);
+                    let target = (isPresenter) ? _audioVideo.presenter : _audioVideo.participants;
+                    let jsonResponse = JSON.parse(xhr.responseText);
                     //identifier generated on the server to avoid collisions
                     result['_id'] = jsonResponse['_id'];
                     //stream does not exist yet
@@ -656,7 +656,7 @@ if (Meteor.isClient) {
                     }
                     //only participants have offsets
                     if (!isPresenter) {
-                        var msBefore = (result.time.getTime() - runTimeMs) - _audioVideo.time.getTime();
+                        let msBefore = (result.time.getTime() - runTimeMs) - _audioVideo.time.getTime();
                         result['offset'] = (msBefore / 1000).toFixed(3);
                     }
                     //push new recording into list
@@ -682,17 +682,17 @@ if (Meteor.isClient) {
 
     Template.overlay.events({
         'click': function (event) {
-            var hasClickedLeftMouseButton = _.isEqual(event.which, 1);
+            let hasClickedLeftMouseButton = _.isEqual(event.which, 1);
             if (!hasClickedLeftMouseButton) {
                 return true;
             }
             //-------------------------------------------------------
-            var d3Target = d3.select(event.currentTarget);
-            var hasSelectedTextTool = _.isEqual(Session.get('overlay.tool'), 'text');
-            var isReplaceOn = Session.get('overlay.tool.replace');
-            var isUsingEraser = _.isEqual(Session.get('overlay.tool'), 'erase');
-            var isTargetTextInput = d3Target.classed('annotation-text-input');
-            var isTargetTextHandle = d3Target.classed('annotation-text-handle');
+            let d3Target = d3.select(event.currentTarget);
+            let hasSelectedTextTool = _.isEqual(Session.get('overlay.tool'), 'text');
+            let isReplaceOn = Session.get('overlay.tool.replace');
+            let isUsingEraser = _.isEqual(Session.get('overlay.tool'), 'erase');
+            let isTargetTextInput = d3Target.classed('annotation-text-input');
+            let isTargetTextHandle = d3Target.classed('annotation-text-handle');
             if (isReplaceOn) {
                 if (isTargetTextInput) {
                     overlayLibrary.setActiveText(d3Target.node());
@@ -708,7 +708,7 @@ if (Meteor.isClient) {
                             overlayLibrary.replaceNote('latest', slideLibrary.title(), slideLibrary.getPage());
                         }
                     } else if (isTargetTextHandle) {
-                        var domTextBox = d3Target.node().parentNode;
+                        let domTextBox = d3Target.node().parentNode;
                         overlayLibrary.startDragTextbox(domTextBox);
                     }
                 } // start drawing a shape
@@ -725,7 +725,7 @@ if (Meteor.isClient) {
                             key.setScope('text-entry');
                             key.filter = key.filters['text-entry'];
                         } else if (isTargetTextHandle) {
-                            var domTextBox = d3Target.node().parentNode;
+                            let domTextBox = d3Target.node().parentNode;
                             overlayLibrary.startDragTextbox(domTextBox);
                         }
                     } // start drawing a shape
@@ -733,15 +733,15 @@ if (Meteor.isClient) {
             }
         },
         'mouseup': function (event) {
-            var hasClickedLeftMouseButton = _.isEqual(event.which, 1);
+            let hasClickedLeftMouseButton = _.isEqual(event.which, 1);
             if (!hasClickedLeftMouseButton) {
                 return true;
             }
             //-------------------------------------------------------
-            var d3Target = d3.select(event.target);
-            var hasSelectedTextTool = _.isEqual(Session.get('overlay.tool'), 'text');
-            var isTargetTextInput = d3Target.classed('annotation-text-input');
-            var isTargetTextHandle = d3Target.classed('annotation-text-handle');
+            let d3Target = d3.select(event.target);
+            let hasSelectedTextTool = _.isEqual(Session.get('overlay.tool'), 'text');
+            let isTargetTextInput = d3Target.classed('annotation-text-input');
+            let isTargetTextHandle = d3Target.classed('annotation-text-handle');
             if ((!hasSelectedTextTool && !isTargetTextInput && !isTargetTextHandle)) {
                 Session.set('draw', false);
                 switch (Session.get('overlay.tool')) {
@@ -773,21 +773,21 @@ if (Meteor.isClient) {
             }
         },
         'mouseover .annotation-text-handle': function (event) {
-            var jqTextbox = $(event.target).parent().get(0);
+            let jqTextbox = $(event.target).parent().get(0);
             overlayLibrary.startDragTextbox(jqTextbox);
         },
         'mouseout .annotation-text-handle': function (event) {
-            var jqTextbox = $(event.target).parent().get(0);
+            let jqTextbox = $(event.target).parent().get(0);
             overlayLibrary.stopDragTextbox(jqTextbox);
         },
         'mouseup .annotation-text-handle': function (event) {
-            var jqTextHandle = $(event.target);
-            var jqTextBox = jqTextHandle.parent();
-            var jqTextInput = jqTextBox.find('.annotation-text-input').first();
+            let jqTextHandle = $(event.target);
+            let jqTextBox = jqTextHandle.parent();
+            let jqTextInput = jqTextBox.find('.annotation-text-input').first();
             overlayLibrary.storeTextbox(slideLibrary.title(), slideLibrary.getPage(), jqTextInput.get(0));
         },
         'keyup .annotation-text-input, mouseup .annotation-text-input': function (event) {
-            var domTextInput = event.target;
+            let domTextInput = event.target;
             overlayLibrary.autosizeTextbox(domTextInput);
         },
         'mouseover': function (event) {
@@ -804,17 +804,17 @@ if (Meteor.isClient) {
          }
          },*/
         'mousedown': function (event) {
-            var hasClickedLeftMouseButton = _.isEqual(event.which, 1);
+            let hasClickedLeftMouseButton = _.isEqual(event.which, 1);
             if (!hasClickedLeftMouseButton) {
                 return true;
             }
             //-------------------------------------------------------
-            var d3Target = d3.select(event.target);
-            var isReplaceOn = Session.get('overlay.tool.replace');
-            var isUsingEraser = _.isEqual(Session.get('overlay.tool'), 'erase');
-            var hasSelectedTextTool = _.isEqual(Session.get('overlay.tool'), 'text');
-            var isTargetTextInput = d3Target.classed('annotation-text-input');
-            var isTargetTextHandle = d3Target.classed('annotation-text-handle');
+            let d3Target = d3.select(event.target);
+            let isReplaceOn = Session.get('overlay.tool.replace');
+            let isUsingEraser = _.isEqual(Session.get('overlay.tool'), 'erase');
+            let hasSelectedTextTool = _.isEqual(Session.get('overlay.tool'), 'text');
+            let isTargetTextInput = d3Target.classed('annotation-text-input');
+            let isTargetTextHandle = d3Target.classed('annotation-text-handle');
             overlayLibrary.storeActiveTextInputs(slideLibrary.title(), slideLibrary.getPage());
             key.filter = key.filters['all'];
             key.setScope('keyboard-shortcuts');
