@@ -15,9 +15,12 @@ var FILE_TYPE = 'webm';
 
 //this import is included from the index.html <script> tag.
 var _connection = new RTCMultiConnection();
+var localMediaRecorder; //MediaStreamRecorder for 'this' user
+var localStream; //Stream for 'this' user
 var _mediaRecorderList = [];
 var _audioVideo = {};
 var _isRecording = false;
+var isMuted = false; // Toggle for muting/unmuting audio and video stream
 var _currentRecordingURL = "";
 
 if (Meteor.isClient) {
@@ -588,9 +591,37 @@ if (Meteor.isClient) {
             }
         });
     });
+	
+	/*
+	* Mute toggle button for muting/unmuting. Should work for the live stream and recording
+	*/
+	$(document).ready(function() {
+		$('#muteButton').click(function() {
+			// mute audio and/or video (whatever is being streamed) for the stream 
+			// (to prevent saved recording) and the connection (to disable stream UI)
+			if (isMuted) {
+				if (localStream.getAudioTracks()[0]) localStream.getAudioTracks()[0].enabled = true;
+				if (localStream.getVideoTracks()[0]) localStream.getVideoTracks()[0].enabled = true;
+				_connection.streamEvents[localMediaRecorder.streamid].stream.unmute('both');
+			}
+			else {
+				if (localStream.getAudioTracks()[0]) localStream.getAudioTracks()[0].enabled = false;
+				if (localStream.getVideoTracks()[0]) localStream.getVideoTracks()[0].enabled = false;
+				_connection.streamEvents[localMediaRecorder.streamid].stream.mute('both');
+			}
+			isMuted = !isMuted;
+		});
+	});
+	
 
     function startStream(event, isPresenter) {
         var mediaRecorder = new MediaStreamRecorder(event.stream);
+		
+		// Save reference to the local media stream recorder and stream (user's stream of themself)
+		if (isPresenter) {
+			localMediaRecorder = mediaRecorder;
+			localStream = event.stream;
+		}
         //used to remove the recorder when the stream ends
         mediaRecorder.streamid = event.streamid;
         //only the presenter will record video, we will merge audio into this video
