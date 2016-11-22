@@ -297,11 +297,41 @@ if (Meteor.isClient) {
                         };
                         //add the video and play the JSON / video simultaneously.
                         document.getElementById('control-fluid').appendChild(video);
+                        video.id = 'uploadedRecording';
                         video.play();
-                        Playback.with(JSON.parse(recordedJsonStr));
+
+                        Playback.upload(JSON.parse(recordedJsonStr));
+                        Playback.play();
                     });
                 });
             });
+        },
+        'click .btn-skip-back': function () {
+            var video = document.getElementById('uploadedRecording');
+            video.currentTime = video.currentTime - 5;
+            Playback.skipBack();
+
+        },
+        'click .btn-stop': function () {
+            var video = document.getElementById('uploadedRecording');
+            video.currentTime = 0;
+            video.pause();
+            Playback.stop();
+        },
+        'click .btn-pause': function () {
+            var video = document.getElementById('uploadedRecording');
+            video.pause();
+            Playback.pause();
+        },
+        'click .btn-play': function () {
+            var video = document.getElementById('uploadedRecording');
+            video.play();
+            Playback.play();
+        },
+        'click .btn-skip-forward': function () {
+            var video = document.getElementById('uploadedRecording');
+            video.currentTime = video.currentTime + 5;
+            Playback.skipForward();
         },
     });
 
