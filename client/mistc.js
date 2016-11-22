@@ -657,7 +657,7 @@ if (Meteor.isClient) {
                         target[event['streamid']] = [];
                     }
                     //only participants have offsets
-                    if (!_isPresenter) {
+                    if (event.type !== 'local') {
                         let msBefore = (result.time.getTime() - runTimeMs) - _audioVideo.time.getTime();
                         result['offset'] = (msBefore / 1000).toFixed(3);
                     }
