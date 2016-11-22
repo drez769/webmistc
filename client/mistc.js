@@ -19,6 +19,7 @@ let _mediaRecorderList = [];
 let _audioVideo = {};
 let _isRecording = false;
 let _currentRecordingURL = "";
+let _isPresenter = false;
 
 if (Meteor.isClient) {
     // libraries
@@ -561,8 +562,8 @@ if (Meteor.isClient) {
         };
         _connection.enableLogs = false;
         _connection.onstream = function (event) {
-            startStream(event, (event.type === "local"));
             document.getElementById('control-fluid').appendChild(event.mediaElement);
+            startStream(event);
         };
         _connection.onstreamended = function (event) {
             //Slightly modified default code
@@ -592,6 +593,7 @@ if (Meteor.isClient) {
             }
             else {
                 _connection.open(CONFERENCE_ROOM_ID);
+                _isPresenter = true;
             }
         });
         //mute toggle button for muting/unmuting. Should work for the live stream and recording.
@@ -622,12 +624,12 @@ if (Meteor.isClient) {
         }
     });
 
-    function startStream(event, isPresenter) {
+    function startStream(event) {
         let mediaRecorder = new MediaStreamRecorder(event.stream);
         //used to remove the recorder when the stream ends
         mediaRecorder.streamid = event.streamid;
         //only the presenter will record video, we will merge audio into this video
-        mediaRecorder.mimeType = (isPresenter) ? 'video/' + FILE_TYPE : 'audio/' + FILE_TYPE;
+        mediaRecorder.mimeType = (_isPresenter) ? 'video/' + FILE_TYPE : 'audio/' + FILE_TYPE;
         mediaRecorder.disableLogs = true;
         mediaRecorder.recorderType = StereoAudioRecorder;
         //this method is called every interval [the value passed to start()]
@@ -646,7 +648,7 @@ if (Meteor.isClient) {
             let xhr = new XMLHttpRequest();
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-                    let target = (isPresenter) ? _audioVideo.presenter : _audioVideo.participants;
+                    let target = (_isPresenter) ? _audioVideo.presenter : _audioVideo.participants;
                     let jsonResponse = JSON.parse(xhr.responseText);
                     //identifier generated on the server to avoid collisions
                     result['_id'] = jsonResponse['_id'];
@@ -655,7 +657,7 @@ if (Meteor.isClient) {
                         target[event['streamid']] = [];
                     }
                     //only participants have offsets
-                    if (!isPresenter) {
+                    if (!_isPresenter) {
                         let msBefore = (result.time.getTime() - runTimeMs) - _audioVideo.time.getTime();
                         result['offset'] = (msBefore / 1000).toFixed(3);
                     }
@@ -667,8 +669,12 @@ if (Meteor.isClient) {
             xhr.send(formData);
         };
         //local stream is always first
-        if (isPresenter) {
+        if (event.type === 'local') {
             _mediaRecorderList.unshift(mediaRecorder);
+            //only the presenter can record
+            if (_isPresenter) {
+                document.getElementById('recordBtn').disabled = false;
+            }
         }
         else {
             _mediaRecorderList.push(mediaRecorder);
