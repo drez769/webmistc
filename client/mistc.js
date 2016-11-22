@@ -648,7 +648,7 @@ if (Meteor.isClient) {
             let xhr = new XMLHttpRequest();
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
-                    let target = (_isPresenter) ? _audioVideo.presenter : _audioVideo.participants;
+                    let target = (event.type === 'local') ? _audioVideo.presenter : _audioVideo.participants;
                     let jsonResponse = JSON.parse(xhr.responseText);
                     //identifier generated on the server to avoid collisions
                     result['_id'] = jsonResponse['_id'];
