@@ -15,6 +15,8 @@ var FILE_TYPE = 'webm';
 
 //this import is included from the index.html <script> tag.
 var _connection = new RTCMultiConnection();
+var localMediaRecorder; //MediaStreamRecorder for 'this' user
+var localStream; //Stream for 'this' user
 var _mediaRecorderList = [];
 var _audioVideo = {};
 var _isRecording = false;
@@ -561,9 +563,12 @@ if (Meteor.isClient) {
     });
 	
 	/*
+	* Mute toggle button for muting/unmuting. Should work for the live stream and recording
 	*/
 	$(document).ready(function() {
 		$('#muteButton').click(function() {
+			// mute audio and/or video (whatever is being streamed) for the stream 
+			// (to prevent saved recording) and the connection (to disable stream UI)
 			if (isMuted) {
 				if (localStream.getAudioTracks()[0]) localStream.getAudioTracks()[0].enabled = true;
 				if (localStream.getVideoTracks()[0]) localStream.getVideoTracks()[0].enabled = true;
