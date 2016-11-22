@@ -139,6 +139,7 @@
 #control-fluid video, #control-fluid audio {
     height: 100%;
     margin: 0 3px;
+    max-width: 130px;
 }
 
 #question-panel {
