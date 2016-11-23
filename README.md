@@ -1,5 +1,9 @@
 # WebMISTC Simulteaching Tool
 
+- Install meteor
+    - For Linux/MacOS `curl https://install.meteor.com | /bin/sh`
+    - Windows visit `https://install.meteor.com/windows`
+
 Development setup with default socket.io:
 - Clone WebMISTC from GitHub `git clone https://github.com/dvoegeli/webmistc.git`
     - In the WebMISTC directory:
