@@ -209,10 +209,10 @@ if (Meteor.isClient) {
                         first = false;
                     }
                 });
-                //require at least 5 seconds of recording to stop.
+                //require at least 1 second of recording to stop.
                 setTimeout(function() {
                     document.getElementById('recordBtn').disabled = false;
-                }, 5000);
+                }, 1000);
             } else {
                 //this stops recording for every stream - local should be last
                 _mediaRecorderList.reverse().forEach(function (mediaRecorder) {
@@ -257,6 +257,10 @@ if (Meteor.isClient) {
             }
         },
         'click .overlay-btn-recording[title="Download"]': function (event) {
+            //disable interaction until download completes.
+            document.getElementById('downloadBtn').disabled = true;
+            document.getElementById('recordBtn').disabled = true;
+            document.getElementById('recordingType').disabled = true;
             let xhr = new XMLHttpRequest();
             xhr.responseType = 'blob';
             xhr.onreadystatechange = function () {
@@ -277,6 +281,9 @@ if (Meteor.isClient) {
                     else {
                         alert('An error occurred while trying to download the recording.');
                     }
+                    document.getElementById('downloadBtn').disabled = false;
+                    document.getElementById('recordBtn').disabled = false;
+                    document.getElementById('recordingType').disabled = false;
                 }
             };
             xhr.open('GET', _currentRecordingURL);
