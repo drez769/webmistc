@@ -304,6 +304,7 @@ if (Meteor.isClient) {
                         //remove the video once the recording has stopped playing.
                         video.onended = function () {
                             document.getElementById('control-fluid').removeChild(video);
+                            Playback.cleanup();
                         };
                         //add the video and play the JSON / video simultaneously.
                         document.getElementById('control-fluid').appendChild(video);
@@ -597,19 +598,17 @@ if (Meteor.isClient) {
             }
         });
         //mute toggle button for muting/unmuting. Should work for the live stream and recording.
-        document.getElementById('muteButton').onclick = function() {
+        document.getElementById('muteButton').onclick = function () {
             //implicit this object refers to the getElementById object.
             if (_mediaRecorderList.length > 0) {
                 let streamObject = _connection.streamEvents[_mediaRecorderList[0].streamid];
                 //the first stream in the list is always the local stream, but we check here anyway.
                 if (streamObject.type === 'local') {
                     if (streamObject.stream.getAudioTracks()[0]) {
-                        streamObject.stream.getAudioTracks()[0].enabled =
-                            !streamObject.stream.getAudioTracks()[0].enabled;
+                        streamObject.stream.getAudioTracks()[0].enabled = !streamObject.stream.getAudioTracks()[0].enabled;
                     }
                     if (streamObject.stream.getVideoTracks()[0]) {
-                        streamObject.stream.getVideoTracks()[0].enabled =
-                            !streamObject.stream.getVideoTracks()[0].enabled;
+                        streamObject.stream.getVideoTracks()[0].enabled = !streamObject.stream.getVideoTracks()[0].enabled;
                     }
                     if (streamObject.stream.getAudioTracks()[0].enabled) {
                         streamObject.stream.unmute('both');
@@ -876,4 +875,4 @@ if (Meteor.isClient) {
             }
         }
     });
-} 
+}
