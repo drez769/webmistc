@@ -192,12 +192,17 @@ if (Meteor.isClient) {
                 _isRecording = true;
                 _currentRecordingURL = '';
                 document.getElementById('downloadBtn').disabled = true;
+                document.getElementById('recordingType').disabled = true;
                 //this starts recording for every stream - local is always first
                 _mediaRecorderList.forEach(function (mediaRecorder) {
+                    if (first) {
+                        mediaRecorder.mimeType = document.getElementById('recordingType').value;
+                    }
                     mediaRecorder.start(MILLISECOND_INTERVAL);
                     mediaRecorder.startTime = new Date();
                     //the first is the local stream, this constant ID's when we started recording
                     if (first) {
+                        //here we want to approximate the exact start time.
                         _audioVideo.time = mediaRecorder.startTime;
                         first = false;
                     }
@@ -215,6 +220,7 @@ if (Meteor.isClient) {
                     //get resulting video url
                     let formData = new FormData();
                     formData.append('json', JSON.stringify(_audioVideo));
+                    formData.append('type', _mediaRecorderList[0].mimeType);
                     let xhr = new XMLHttpRequest();
                     xhr.onreadystatechange = function () {
                         if (xhr.readyState === XMLHttpRequest.DONE) {
@@ -222,6 +228,7 @@ if (Meteor.isClient) {
                                 let jsonResponse = JSON.parse(xhr.responseText);
                                 _currentRecordingURL = jsonResponse['video'];
                                 document.getElementById('downloadBtn').disabled = false;
+                                document.getElementById('recordingType').disabled = false;
                             }
                             else {
                                 alert('A error occurred while trying to create the recording.');
@@ -628,8 +635,20 @@ if (Meteor.isClient) {
         let mediaRecorder = new MediaStreamRecorder(event.stream);
         //used to remove the recorder when the stream ends
         mediaRecorder.streamid = event.streamid;
-        //only the presenter will record video, we will merge audio into this video
-        mediaRecorder.mimeType = (_isPresenter) ? 'video/' + FILE_TYPE : 'audio/' + FILE_TYPE;
+        //only the presenter can record video or video
+        if (_isPresenter) {
+            let recordingType = document.getElementById('recordingType');
+            if (event.stream.isAudio === 1) {
+                //remove the video selection from the drop down because the presenter only has audio available.
+                recordingType.removeChild(recordingType.options[1]);
+            }
+            else {
+                //select the video recording by default
+                recordingType.selectedIndex = 1;
+            }
+            recordingType.enabled = true;
+        }
+        mediaRecorder.mimeType = 'audio/' + FILE_TYPE;
         mediaRecorder.disableLogs = true;
         mediaRecorder.recorderType = StereoAudioRecorder;
         //this method is called every interval [the value passed to start()]
@@ -671,9 +690,10 @@ if (Meteor.isClient) {
         //local stream is always first
         if (event.type === 'local') {
             _mediaRecorderList.unshift(mediaRecorder);
-            //only the presenter can record
+            //only the presenter can record and change the selection.
             if (_isPresenter) {
                 document.getElementById('recordBtn').disabled = false;
+                document.getElementById('recordingType').disabled = false;
             }
         }
         else {
