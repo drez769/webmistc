@@ -209,10 +209,10 @@ if (Meteor.isClient) {
                         first = false;
                     }
                 });
-                //require at least 1 second of recording to stop.
+                //require at least 5 seconds of recording to stop.
                 setTimeout(function() {
                     document.getElementById('recordBtn').disabled = false;
-                }, 1000);
+                }, 5000);
             } else {
                 //this stops recording for every stream - local should be last
                 _mediaRecorderList.reverse().forEach(function (mediaRecorder) {
