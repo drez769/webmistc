@@ -208,6 +208,8 @@ if (Meteor.isClient) {
                     }
                 });
             } else {
+                //disable the recording button until processing is complete.
+                document.getElementById('recordBtn').disabled = true;
                 //this stops recording for every stream - local should be last
                 _mediaRecorderList.reverse().forEach(function (mediaRecorder) {
                     mediaRecorder.stop();
@@ -226,25 +228,27 @@ if (Meteor.isClient) {
                         if (xhr.readyState === XMLHttpRequest.DONE) {
                             if (xhr.status === 200) {
                                 let jsonResponse = JSON.parse(xhr.responseText);
-                                _currentRecordingURL = jsonResponse['video'];
+                                _currentRecordingURL = jsonResponse['result'];
                                 document.getElementById('downloadBtn').disabled = false;
                                 document.getElementById('recordingType').disabled = false;
                             }
                             else {
-                                alert('A error occurred while trying to create the recording.');
+                                alert('An error occurred while trying to create the recording.');
                             }
+                            const time = Date.now();
+                            Meteor.call('recordings.insert', {
+                                state: 'time',
+                                action: 'stop',
+                                params: [time],
+                                time: time,
+                            });
+                            Meteor.call('recordings.stop');
+                            //re-enable the recording button.
+                            document.getElementById('recordBtn').disabled = false;
                         }
                     };
                     xhr.open('POST', 'https://www.jkwiz.com/combine3.php');
                     xhr.send(formData);
-                    const time = Date.now();
-                    Meteor.call('recordings.insert', {
-                        state: 'time',
-                        action: 'stop',
-                        params: [time],
-                        time: time,
-                    });
-                    Meteor.call('recordings.stop');
                 }, _mediaRecorderList.length * 3000);
             }
         },
@@ -569,6 +573,8 @@ if (Meteor.isClient) {
         };
         _connection.enableLogs = false;
         _connection.onstream = function (event) {
+            //remove video controls from preview (pause/play button, etc).
+            event.mediaElement.removeAttribute('controls');
             document.getElementById('control-fluid').appendChild(event.mediaElement);
             startStream(event);
         };
