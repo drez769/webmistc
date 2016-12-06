@@ -148,6 +148,8 @@ if (Meteor.isClient) {
             }
         },
         'click .overlay-btn-recording[title="Recording"]': function (event) {
+            //disable the recording button until processing is complete.
+            document.getElementById('recordBtn').disabled = true;
             $(event.currentTarget).toggleClass('on');
             let recordingMode = $(event.currentTarget).hasClass('on');
             let color = recordingMode ? 'crimson' : '';
@@ -207,9 +209,11 @@ if (Meteor.isClient) {
                         first = false;
                     }
                 });
+                //require at least 2 seconds of recording to stop.
+                setTimeout(function() {
+                    document.getElementById('recordBtn').disabled = false;
+                }, 2000);
             } else {
-                //disable the recording button until processing is complete.
-                document.getElementById('recordBtn').disabled = true;
                 //this stops recording for every stream - local should be last
                 _mediaRecorderList.reverse().forEach(function (mediaRecorder) {
                     mediaRecorder.stop();
