@@ -585,7 +585,9 @@ if (Meteor.isClient) {
         _connection.enableLogs = false;
         _connection.onstream = function (event) {
             //remove video controls from preview (pause/play button, etc).
-            event.mediaElement.removeAttribute('controls');
+            //event.mediaElement.removeAttribute('controls');
+            //controls are needed for audio only atm.
+            event.mediaElement.poster = 'http://www.myspacegens.com/images/avatars/003.gif';
             document.getElementById('control-fluid').appendChild(event.mediaElement);
             startStream(event);
         };
