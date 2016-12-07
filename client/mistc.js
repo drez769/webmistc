@@ -584,20 +584,23 @@ if (Meteor.isClient) {
         };
         _connection.enableLogs = false;
         _connection.onstream = function (event) {
-            //remove video controls from preview (pause/play button, etc).
-            //event.mediaElement.removeAttribute('controls');
-            //controls are needed for audio only atm.
-            document.getElementById('control-fluid').appendChild(event.mediaElement);
+            //construct video element (applies mainly to audio only sources).
+            console.log(event.mediaElement.autoPlay);
+            let videoElement = document.createElement('video');
+            videoElement.id = event.mediaElement.id;
+            videoElement.src = event.mediaElement.src;
+            videoElement.controls = false;
+            videoElement.muted = true;
+            videoElement.poster = 'images/no-video-icon.png';
+            videoElement.play();
+            document.getElementById('control-fluid').appendChild(videoElement);
             startStream(event);
         };
         _connection.onstreamended = function (event) {
-            //Slightly modified default code
-            if (!event.mediaElement) {
-                event.mediaElement = document.getElementById(event.streamid);
-            }
-            if (event.mediaElement && event.mediaElement.parentNode) {
-                event.mediaElement.parentNode.removeChild(event.mediaElement);
-            }
+            //Remove video/audio stream from list
+            document.getElementById('control-fluid').removeChild(
+                document.getElementById(event.streamid)
+            );
             //End default code
             let target;
             _mediaRecorderList.forEach(function (mediaRecorder, index) {
