@@ -8,6 +8,7 @@ export var Playback = {};
 const self = this;
 let timings = [];
 let videoTracking = null;
+let pbSlideTracker = null; //Timer to keep the playback slider in the correct position
 let startedTime = -1;
 let elapsedTime = -1;
 let recordings = "";
@@ -58,16 +59,21 @@ Playback.skipBack = function () {
 };
 
 Playback.stop = function () {
+	// Clear timers tracking the video and reset playback slider
+	Playback.cleanup();
+	$('#pbslider').slider('setValue', 0);
+	
     _.each(timings, function(timing){
         Meteor.clearTimeout(timing)
     })
     isPaused = false;
     startedTime = -1;
     elapsedTime = -1;
-    Meteor.clearInterval(videoTracking);
 };
 
 Playback.pause = function () {
+	Playback.cleanup();
+	
     _.each(timings, function(timing){
         Meteor.clearTimeout(timing)
     })
@@ -80,6 +86,8 @@ Playback.play = function () {
     let firstTimeStamp = self.start;
     isPaused = false;
     startedTime = Date.now();
+	
+	// If playback is NOT being started from a stop
     if (elapsedTime != -1) {
         firstTimeStamp += elapsedTime;
         startedTime += elapsedTime;
@@ -135,21 +143,30 @@ String.prototype.toHHMMSS = function () {
 };
 
 trackVideo = function (){
-    Meteor.setTimeout(
-        function(){
-            let video = document.getElementById('uploadedRecording');
-            document.getElementById('duration').placeholder=video.duration.toString().toHHMMSS();
-            console.log("duration: "+video.duration);
-            videoTracking = Meteor.setInterval(
-                function(){
-                    console.log("currentTime: "+video.currentTime);
-                    document.getElementById('position').placeholder=video.currentTime.toString().toHHMMSS();
-                }, 500 // milliseconds
-            );
-        },500
-    );
+	let video = document.getElementById('uploadedRecording');
+
+	// Timer to keep track of the current playback time in the video
+    videoTracking = Meteor.setInterval(
+		function(){
+			console.log("currentTime: "+video.currentTime);
+			document.getElementById('position').placeholder=video.currentTime.toString().toHHMMSS();
+		}, 500 // milliseconds
+	);
+	
+	// For tracking the playback slider
+	let sliderMax = $("#pbslider").data("slider-max");
+	let interval = video.duration / sliderMax;
+	if (video.currentTime === 0) $('#pbslider').slider('setValue', 0);
+	if (video.currentTime !== 0) $('#pbslider').slider('setValue', video.currentTime / interval);
+	pbSlideTracker = Meteor.setInterval(function () {
+		let currentPosition = video.currentTime / interval;
+		console.log("Slide: " + video.currentTime / interval)
+		$('#pbslider').slider('setValue', currentPosition);
+	}, interval * 1000);
 };
 
 Playback.cleanup = function() {
+	console.log("playback stopped");
     Meteor.clearInterval(videoTracking);
+	Meteor.clearInterval(pbSlideTracker);
 }

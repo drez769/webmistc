@@ -301,17 +301,25 @@ if (Meteor.isClient) {
                         let video = document.createElement('video');
                         video.src = URL.createObjectURL(new Blob([videoData], {type: 'video/webm'}));
                         video.controls = true;
-                        //remove the video once the recording has stopped playing.
+                        //remove the video once the recording has stopped playing
                         video.onended = function () {
-                            document.getElementById('control-fluid').removeChild(video);
+                            // document.getElementById('control-fluid').removeChild(video);
                             Playback.cleanup();
+							$('#pbslider').slider('setValue', $("#pbslider").data("slider-max"));
                         };
                         //add the video and play the JSON / video simultaneously.
                         document.getElementById('control-fluid').appendChild(video);
+						
+						video.style.display = 'none'; //hide the video player (no need to see it)
+						//TODO make sure old video players are removed when a new video is uploaded?
                         video.id = 'uploadedRecording';
-                        video.play();
                         Playback.upload(JSON.parse(recordedJsonStr));
-                        Playback.play();
+						
+						// Start playback once the video is loaded
+						video.onloadeddata = function () {
+							video.play();
+							Playback.play();
+						};
                     });
                 });
             });
