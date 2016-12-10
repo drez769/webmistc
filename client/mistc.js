@@ -277,7 +277,41 @@ if (Meteor.isClient) {
 
     // Control
     Template.controlPanel.onRendered(function () {
-        $('.slider-selection').slider({
+		// Event handler for moving/clicking the playback slider.
+		let setPlayback = function() {
+			let sliderValue = $('#pbslider').data('slider').getValue();
+			let video = document.getElementById('uploadedRecording');			
+			let sliderMax = $("#pbslider").data("slider-max");
+			let percent = sliderValue / sliderMax;
+            video.currentTime = percent * video.duration;
+			
+			Playback.pause();
+			Playback.updateSlider();
+			if (video.paused) return;
+			Playback.play();
+		};
+		
+		// Playback slider set up and event handlers
+        $('#pbslider').slider({
+            formatter: function (value) {
+                return 'Current value: ' + value;
+            }
+        }).on('slide', setPlayback) // slide event
+		// .on('slideStop', setPlayback)
+		.data('slider');
+		
+		// 'hack' to handle a single click event on the slider
+		$('.slider-horizontal').mousedown(setPlayback);
+
+		// Volume and mic sliders. Doesn't seem possible to easily control
+		// volume or mic from web browser at this time.
+		$('#volumeSlider').slider({
+            formatter: function (value) {
+                return 'Current value: ' + value;
+            }
+        });
+		
+		$('#micSlider').slider({
             formatter: function (value) {
                 return 'Current value: ' + value;
             }
@@ -298,25 +332,28 @@ if (Meteor.isClient) {
             jsZip.loadAsync(jqRecording).then(function (zip) {
                 zip.file("recording.json").async("string").then(function (recordedJsonStr) {
                     zip.file("recording.webm").async("uint8array").then(function (videoData) {
+						$('#uploadedRecording').remove();
                         let video = document.createElement('video');
                         video.src = URL.createObjectURL(new Blob([videoData], {type: 'video/webm'}));
                         video.controls = true;
                         //remove the video once the recording has stopped playing
                         video.onended = function () {
                             // document.getElementById('control-fluid').removeChild(video);
-                            Playback.cleanup();
-							$('#pbslider').slider('setValue', $("#pbslider").data("slider-max"));
+							$('.btn-play')[0].disabled = false;
+							Playback.stop();
+							Playback.updateSlider();
+							// $('#pbslider').slider('setValue', $("#pbslider").data("slider-max"));
                         };
-                        //add the video and play the JSON / video simultaneously.
                         document.getElementById('control-fluid').appendChild(video);
-						
 						video.style.display = 'none'; //hide the video player (no need to see it)
-						//TODO make sure old video players are removed when a new video is uploaded?
                         video.id = 'uploadedRecording';
+						Playback.stop();
                         Playback.upload(JSON.parse(recordedJsonStr));
 						
-						// Start playback once the video is loaded
+						// Start JSON / video playback simultaneously once the video is loaded
 						video.onloadeddata = function () {
+							$('.btn-play')[0].disabled = true;
+							$('.btn-pause')[0].disabled = false;
 							video.play();
 							Playback.play();
 						};
@@ -331,17 +368,23 @@ if (Meteor.isClient) {
 
         },
         'click .btn-stop': function () {
+			$('.btn-play')[0].disabled = false;
+			$('.btn-pause')[0].disabled = true;
             let video = document.getElementById('uploadedRecording');
             video.currentTime = 0;
             video.pause();
             Playback.stop();
         },
         'click .btn-pause': function () {
+			$('.btn-play')[0].disabled = false;
+			$('.btn-pause')[0].disabled = true;
             let video = document.getElementById('uploadedRecording');
             video.pause();
             Playback.pause();
         },
         'click .btn-play': function () {
+			$('.btn-play')[0].disabled = true;
+			$('.btn-pause')[0].disabled = false;
             let video = document.getElementById('uploadedRecording');
             video.play();
             Playback.play();
