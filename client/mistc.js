@@ -19,7 +19,6 @@ let _mediaRecorderList = [];
 let _audioVideo = {};
 let _isRecording = false;
 let _currentRecordingURL = "";
-let _isPresenter = false;
 
 if (Meteor.isClient) {
     // libraries
@@ -148,6 +147,8 @@ if (Meteor.isClient) {
             }
         },
         'click .overlay-btn-recording[title="Recording"]': function (event) {
+            //disable the recording button until processing is complete.
+            document.getElementById('recordBtn').disabled = true;
             $(event.currentTarget).toggleClass('on');
             let recordingMode = $(event.currentTarget).hasClass('on');
             let color = recordingMode ? 'crimson' : '';
@@ -192,16 +193,25 @@ if (Meteor.isClient) {
                 _isRecording = true;
                 _currentRecordingURL = '';
                 document.getElementById('downloadBtn').disabled = true;
+                document.getElementById('recordingType').disabled = true;
                 //this starts recording for every stream - local is always first
                 _mediaRecorderList.forEach(function (mediaRecorder) {
+                    if (first) {
+                        mediaRecorder.mimeType = document.getElementById('recordingType').value;
+                    }
                     mediaRecorder.start(MILLISECOND_INTERVAL);
                     mediaRecorder.startTime = new Date();
                     //the first is the local stream, this constant ID's when we started recording
                     if (first) {
+                        //here we want to approximate the exact start time.
                         _audioVideo.time = mediaRecorder.startTime;
                         first = false;
                     }
                 });
+                //require at least 5 seconds of recording to stop.
+                setTimeout(function () {
+                    document.getElementById('recordBtn').disabled = false;
+                }, 5000);
             } else {
                 //this stops recording for every stream - local should be last
                 _mediaRecorderList.reverse().forEach(function (mediaRecorder) {
@@ -215,33 +225,41 @@ if (Meteor.isClient) {
                     //get resulting video url
                     let formData = new FormData();
                     formData.append('json', JSON.stringify(_audioVideo));
+                    formData.append('type', _mediaRecorderList[0].mimeType);
                     let xhr = new XMLHttpRequest();
                     xhr.onreadystatechange = function () {
                         if (xhr.readyState === XMLHttpRequest.DONE) {
                             if (xhr.status === 200) {
                                 let jsonResponse = JSON.parse(xhr.responseText);
-                                _currentRecordingURL = jsonResponse['video'];
+                                _currentRecordingURL = jsonResponse['result'];
                                 document.getElementById('downloadBtn').disabled = false;
+                                document.getElementById('recordingType').disabled = false;
                             }
                             else {
-                                alert('A error occurred while trying to create the recording.');
+                                alert('An error occurred while trying to create the recording.');
                             }
+                            const time = Date.now();
+                            Meteor.call('recordings.insert', {
+                                state: 'time',
+                                action: 'stop',
+                                params: [time],
+                                time: time,
+                            });
+                            Meteor.call('recordings.stop');
+                            //re-enable the recording button.
+                            document.getElementById('recordBtn').disabled = false;
                         }
                     };
                     xhr.open('POST', 'https://www.jkwiz.com/combine3.php');
                     xhr.send(formData);
-                    const time = Date.now();
-                    Meteor.call('recordings.insert', {
-                        state: 'time',
-                        action: 'stop',
-                        params: [time],
-                        time: time,
-                    });
-                    Meteor.call('recordings.stop');
                 }, _mediaRecorderList.length * 3000);
             }
         },
         'click .overlay-btn-recording[title="Download"]': function (event) {
+            //disable interaction until download completes.
+            document.getElementById('downloadBtn').disabled = true;
+            document.getElementById('recordBtn').disabled = true;
+            document.getElementById('recordingType').disabled = true;
             let xhr = new XMLHttpRequest();
             xhr.responseType = 'blob';
             xhr.onreadystatechange = function () {
@@ -262,6 +280,9 @@ if (Meteor.isClient) {
                     else {
                         alert('An error occurred while trying to download the recording.');
                     }
+                    document.getElementById('downloadBtn').disabled = false;
+                    document.getElementById('recordBtn').disabled = false;
+                    document.getElementById('recordingType').disabled = false;
                 }
             };
             xhr.open('GET', _currentRecordingURL);
@@ -599,7 +620,7 @@ if (Meteor.isClient) {
         }
     };
 
-    Template.overlay.onRendered(function () {
+    let setupConnection = function() {
         //configure default conference settings.
         //currently the first user to begin is the instructor.
         //we include video but have no plans for video recording.
@@ -614,17 +635,22 @@ if (Meteor.isClient) {
         };
         _connection.enableLogs = false;
         _connection.onstream = function (event) {
-            document.getElementById('control-fluid').appendChild(event.mediaElement);
+            //construct video element (applies mainly to audio only sources).
+            let videoElement = document.createElement('video');
+            videoElement.id = event.mediaElement.id;
+            videoElement.src = event.mediaElement.src;
+            videoElement.controls = false;
+            videoElement.muted = true;
+            videoElement.poster = 'images/no-video-icon.png';
+            videoElement.play();
+            document.getElementById('control-fluid').appendChild(videoElement);
             startStream(event);
         };
         _connection.onstreamended = function (event) {
-            //Slightly modified default code
-            if (!event.mediaElement) {
-                event.mediaElement = document.getElementById(event.streamid);
-            }
-            if (event.mediaElement && event.mediaElement.parentNode) {
-                event.mediaElement.parentNode.removeChild(event.mediaElement);
-            }
+            //Remove video/audio stream from list
+            document.getElementById('control-fluid').removeChild(
+                document.getElementById(event.streamid)
+            );
             //End default code
             let target;
             _mediaRecorderList.forEach(function (mediaRecorder, index) {
@@ -645,7 +671,6 @@ if (Meteor.isClient) {
             }
             else {
                 _connection.open(CONFERENCE_ROOM_ID);
-                _isPresenter = true;
             }
         });
         //mute toggle button for muting/unmuting. Should work for the live stream and recording.
@@ -672,14 +697,26 @@ if (Meteor.isClient) {
                 }
             }
         }
+    };
+
+    Template.overlay.onRendered(function () {
+        setupConnection();
     });
 
     function startStream(event) {
         let mediaRecorder = new MediaStreamRecorder(event.stream);
         //used to remove the recorder when the stream ends
         mediaRecorder.streamid = event.streamid;
-        //only the presenter will record video, we will merge audio into this video
-        mediaRecorder.mimeType = (_isPresenter) ? 'video/' + FILE_TYPE : 'audio/' + FILE_TYPE;
+        //anyone can record audio or video
+        if (event.type === 'local') {
+            let recordingType = document.getElementById('recordingType');
+            if (event.stream.isAudio === 1) {
+                //remove the video selection from the drop down because the local stream is audio only
+                recordingType.removeChild(recordingType.options[1]);
+            }
+            recordingType.enabled = true;
+        }
+        mediaRecorder.mimeType = 'audio/' + FILE_TYPE;
         mediaRecorder.disableLogs = true;
         mediaRecorder.recorderType = StereoAudioRecorder;
         //this method is called every interval [the value passed to start()]
@@ -721,10 +758,8 @@ if (Meteor.isClient) {
         //local stream is always first
         if (event.type === 'local') {
             _mediaRecorderList.unshift(mediaRecorder);
-            //only the presenter can record
-            if (_isPresenter) {
-                document.getElementById('recordBtn').disabled = false;
-            }
+            document.getElementById('recordBtn').disabled = false;
+            document.getElementById('recordingType').disabled = false;
         }
         else {
             _mediaRecorderList.push(mediaRecorder);

@@ -74,7 +74,7 @@
 /* NEW STUFF MIGRATE ABOVE INTO BELOW */
 #tool-panel {
     width: 110px;
-    height: 320px;
+    min-height: 320px;
     position: fixed;
     top: 0px;
     left: 0px;
@@ -210,4 +210,9 @@
 
 .slick-slide {
     margin: 5px 5px;
+}
+
+#recordingSelection {
+    color: #fff;
+    margin: 20px 0 0;
 }
