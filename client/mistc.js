@@ -226,12 +226,16 @@ if (Meteor.isClient) {
                     let formData = new FormData();
                     formData.append('json', JSON.stringify(_audioVideo));
                     formData.append('type', _mediaRecorderList[0].mimeType);
+                    //construct an ajax request
                     let xhr = new XMLHttpRequest();
                     xhr.onreadystatechange = function () {
+                        //wait for the request to finish loading completely
                         if (xhr.readyState === XMLHttpRequest.DONE) {
                             if (xhr.status === 200) {
+                                //convert the JSON response to an object
                                 let jsonResponse = JSON.parse(xhr.responseText);
                                 _currentRecordingURL = jsonResponse['result'];
+                                //re-enable the download/type UI elements
                                 document.getElementById('downloadBtn').disabled = false;
                                 document.getElementById('recordingType').disabled = false;
                             }
@@ -280,6 +284,7 @@ if (Meteor.isClient) {
                     else {
                         alert('An error occurred while trying to download the recording.');
                     }
+                    //enable the buttons now that they are ready
                     document.getElementById('downloadBtn').disabled = false;
                     document.getElementById('recordBtn').disabled = false;
                     document.getElementById('recordingType').disabled = false;
@@ -635,7 +640,9 @@ if (Meteor.isClient) {
         };
         _connection.enableLogs = false;
         _connection.onstream = function (event) {
-            //construct video element (applies mainly to audio only sources).
+            //construct video element (applies mainly to audio only sources)
+            //this shows the poster for audio only streams, otherwise
+            //the mediaElement is an audio HTML element
             let videoElement = document.createElement('video');
             videoElement.id = event.mediaElement.id;
             videoElement.src = event.mediaElement.src;
