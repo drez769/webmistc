@@ -21,3 +21,10 @@ Production setup with private socket.io:
         - Start socket.io server `node server.js`
         - Update URL in `client/mistc.js`
     - The application will be available at: `localhost:3000`
+Next Steps for future developers:
+- Update RTC once they solve bugs
+    - Once they solve RTCMultiConnection issue #297, we can add a disable video button
+- Upper layer for authentication and multiple rooms
+- Add floor control
+- Optional push-to-talk button
+- Enable volume and microphone sliders
