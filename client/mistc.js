@@ -19,7 +19,6 @@ let _mediaRecorderList = [];
 let _audioVideo = {};
 let _isRecording = false;
 let _currentRecordingURL = "";
-let _isPresenter = false;
 
 if (Meteor.isClient) {
     // libraries
@@ -210,7 +209,7 @@ if (Meteor.isClient) {
                     }
                 });
                 //require at least 5 seconds of recording to stop.
-                setTimeout(function() {
+                setTimeout(function () {
                     document.getElementById('recordBtn').disabled = false;
                 }, 5000);
             } else {
@@ -569,7 +568,7 @@ if (Meteor.isClient) {
         }
     };
 
-    Template.overlay.onRendered(function () {
+    let setupConnection = function() {
         //configure default conference settings.
         //currently the first user to begin is the instructor.
         //we include video but have no plans for video recording.
@@ -585,7 +584,6 @@ if (Meteor.isClient) {
         _connection.enableLogs = false;
         _connection.onstream = function (event) {
             //construct video element (applies mainly to audio only sources).
-            console.log(event.mediaElement.autoPlay);
             let videoElement = document.createElement('video');
             videoElement.id = event.mediaElement.id;
             videoElement.src = event.mediaElement.src;
@@ -621,23 +619,20 @@ if (Meteor.isClient) {
             }
             else {
                 _connection.open(CONFERENCE_ROOM_ID);
-                _isPresenter = true;
             }
         });
         //mute toggle button for muting/unmuting. Should work for the live stream and recording.
-        document.getElementById('muteButton').onclick = function() {
+        document.getElementById('muteButton').onclick = function () {
             //implicit this object refers to the getElementById object.
             if (_mediaRecorderList.length > 0) {
                 let streamObject = _connection.streamEvents[_mediaRecorderList[0].streamid];
                 //the first stream in the list is always the local stream, but we check here anyway.
                 if (streamObject.type === 'local') {
                     if (streamObject.stream.getAudioTracks()[0]) {
-                        streamObject.stream.getAudioTracks()[0].enabled =
-                            !streamObject.stream.getAudioTracks()[0].enabled;
+                        streamObject.stream.getAudioTracks()[0].enabled = !streamObject.stream.getAudioTracks()[0].enabled;
                     }
                     if (streamObject.stream.getVideoTracks()[0]) {
-                        streamObject.stream.getVideoTracks()[0].enabled =
-                            !streamObject.stream.getVideoTracks()[0].enabled;
+                        streamObject.stream.getVideoTracks()[0].enabled = !streamObject.stream.getVideoTracks()[0].enabled;
                     }
                     if (streamObject.stream.getAudioTracks()[0].enabled) {
                         streamObject.stream.unmute('both');
@@ -650,22 +645,22 @@ if (Meteor.isClient) {
                 }
             }
         }
+    };
+
+    Template.overlay.onRendered(function () {
+        setupConnection();
     });
 
     function startStream(event) {
         let mediaRecorder = new MediaStreamRecorder(event.stream);
         //used to remove the recorder when the stream ends
         mediaRecorder.streamid = event.streamid;
-        //only the presenter can record video or video
-        if (_isPresenter) {
+        //anyone can record audio or video
+        if (event.type === 'local') {
             let recordingType = document.getElementById('recordingType');
             if (event.stream.isAudio === 1) {
-                //remove the video selection from the drop down because the presenter only has audio available.
+                //remove the video selection from the drop down because the local stream is audio only
                 recordingType.removeChild(recordingType.options[1]);
-            }
-            else {
-                //select the video recording by default
-                recordingType.selectedIndex = 1;
             }
             recordingType.enabled = true;
         }
@@ -711,11 +706,8 @@ if (Meteor.isClient) {
         //local stream is always first
         if (event.type === 'local') {
             _mediaRecorderList.unshift(mediaRecorder);
-            //only the presenter can record and change the selection.
-            if (_isPresenter) {
-                document.getElementById('recordBtn').disabled = false;
-                document.getElementById('recordingType').disabled = false;
-            }
+            document.getElementById('recordBtn').disabled = false;
+            document.getElementById('recordingType').disabled = false;
         }
         else {
             _mediaRecorderList.push(mediaRecorder);
