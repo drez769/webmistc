@@ -14,11 +14,12 @@ let MILLISECOND_INTERVAL = 10000; //10 seconds in ms
 let FILE_TYPE = 'webm';
 
 //this import is included from the index.html <script> tag.
-let _connection = new RTCMultiConnection();
+let _connection = null;
 let _mediaRecorderList = [];
 let _audioVideo = {};
 let _isRecording = false;
 let _currentRecordingURL = "";
+let _streamVideo = true;
 
 if (Meteor.isClient) {
     // libraries
@@ -621,17 +622,18 @@ if (Meteor.isClient) {
     };
 
     let setupConnection = function() {
+        _connection = new RTCMultiConnection();
         //configure default conference settings.
         //currently the first user to begin is the instructor.
         //we include video but have no plans for video recording.
         _connection.socketURL = 'https://mistc.jkwiz.com:9001/';
         _connection.session = {
             audio: true,
-            video: true
+            video: _streamVideo
         };
         _connection.sdpConstraints.mandatory = {
             OfferToReceiveAudio: true,
-            OfferToReceiveVideo: true
+            OfferToReceiveVideo: _streamVideo
         };
         _connection.enableLogs = false;
         _connection.onstream = function (event) {
@@ -646,11 +648,12 @@ if (Meteor.isClient) {
             document.getElementById('control-fluid').appendChild(videoElement);
             startStream(event);
         };
-        _connection.onstreamended = function (event) {
+        _connection.onstreamended = _connection.onleave = _connection.onclose = function (event) {
             //Remove video/audio stream from list
-            document.getElementById('control-fluid').removeChild(
-                document.getElementById(event.streamid)
-            );
+            let element = document.getElementById(event.streamid);
+            if (element !== undefined) {
+                document.getElementById('control-fluid').removeChild(element);
+            }
             //End default code
             let target;
             _mediaRecorderList.forEach(function (mediaRecorder, index) {
@@ -673,6 +676,9 @@ if (Meteor.isClient) {
                 _connection.open(CONFERENCE_ROOM_ID);
             }
         });
+    };
+
+    let onReady = function() {
         //mute toggle button for muting/unmuting. Should work for the live stream and recording.
         document.getElementById('muteButton').onclick = function () {
             //implicit this object refers to the getElementById object.
@@ -696,11 +702,23 @@ if (Meteor.isClient) {
                     }
                 }
             }
-        }
+        };
+        //toggle video off button
+        document.getElementById('toggleVideo').onclick = function() {
+            _streamVideo = !_streamVideo;
+            //only the streamid is required, so this object works here.
+            _connection.onleave(_mediaRecorderList[0]);
+            _connection.leave();
+            _connection.close();
+            _connection.disconnect();
+            _connection.closeSocket();
+            setupConnection();
+        };
     };
 
     Template.overlay.onRendered(function () {
         setupConnection();
+        onReady();
     });
 
     function startStream(event) {
