@@ -366,7 +366,6 @@ if (Meteor.isClient) {
 							// $('#pbslider').slider('setValue', $("#pbslider").data("slider-max"));
                         };
                         document.getElementById('control-fluid').appendChild(video);
-						video.style.display = 'none'; //hide the video player (no need to see it)
                         video.id = 'uploadedRecording';
 						Playback.stop();
                         Playback.upload(JSON.parse(recordedJsonStr));
