@@ -6,11 +6,11 @@ export var Playback = {};
 
 //HACK: scope binding
 const self = this;
-let timings = [];
-let videoTracking = null;
-let pbSlideTracker = null; //Timer to keep the playback slider in the correct position
-let startedTime = -1;
-let elapsedTime = -1;
+let timings = [];           //Holds Meteor.setTimeout returns to time slide changes
+let videoTracking = null;   //Holds Meteor.setInterval return to track video position
+let pbSlideTracker = null;  //Timer to keep the playback slider in the correct position
+let startedTime = -1;       //Timer for video playback
+let elapsedTime = -1;       //Timer for video playback
 let totalTime = 0; //Unused. Total time a recording has been played back so far.
 				   //Would be needed to fix syncing bug that previously existed.
 				   //Instead, syncing is done based on an audio/video recording timer.
@@ -31,6 +31,8 @@ function replaceNote(whichNote, title, number) {
     }
 };
 
+// initTimes sets variables for use with
+// Meteor.setTimeout for playback.
 function initTimes(recordings) {
     const start = _.head(recordings);
     const stop = _.last(recordings);
@@ -38,6 +40,7 @@ function initTimes(recordings) {
     self.stop = stop.time;
 }
 
+// removeTimes formats the json so we can use it for playback
 function removeTimes(recordings) {
     // drop first and last element
     recordings = _.drop(recordings);
@@ -45,26 +48,13 @@ function removeTimes(recordings) {
     return recordings;
 }
 
+// upload is a simple wrapper to prep uploads for playback
 Playback.upload = function (json) {
     initTimes(json);
     recordings = removeTimes(json);
 };
 
-Playback.skipBack = function () {
-    if (isPaused) {
-        elapsedTime = elapsedTime - 5000;
-        if (elapsedTime < 0) {elapsedTime = 0;}
-		totalTime = totalTime > 5000 ? totalTime-5000 : 0;
-    } else {
-        Playback.pause();
-        elapsedTime = elapsedTime - 5000;
-        if (elapsedTime < 0) {elapsedTime = 0;}
-		totalTime = totalTime > 5000 ? totalTime-5000 : 0;
-        Playback.play();
-    }
-	Playback.updateSlider();
-};
-
+// stops and resets slide manipulation and tracking
 Playback.stop = function () {
 	// Clear timers tracking the video and reset playback slider
 	Playback.cleanup();
@@ -80,6 +70,7 @@ Playback.stop = function () {
 	totalTime = 0;
 };
 
+// pauses, but allows resuming for slides and tracking
 Playback.pause = function () {
 	Playback.cleanup();
 	
@@ -92,7 +83,9 @@ Playback.pause = function () {
 	totalTime += elapsedTime;
 };
 
+// plays slide changes and tracking
 Playback.play = function () {
+    // initial setup
     trackVideo();
     let firstTimeStamp = self.start;
     isPaused = false;
@@ -151,12 +144,27 @@ let updateSlideShow = function (recording) {
 		break;
 	}
 	let video = document.getElementById('uploadedRecording');
-	// console.log("Current vid - this");
-	// console.log(video.currentTime);
-	// console.log(recording.time - self.start + elapsedTime)
-	// console.log(firstTimeStamp);
 }
 
+// Skips back 5 seconds in the video and slides.
+// Maintains paused status if paused.
+Playback.skipBack = function () {
+    if (isPaused) {
+        elapsedTime = elapsedTime - 5000;
+        if (elapsedTime < 0) {elapsedTime = 0;}
+        totalTime = totalTime > 5000 ? totalTime-5000 : 0;
+    } else {
+        Playback.pause();
+        elapsedTime = elapsedTime - 5000;
+        if (elapsedTime < 0) {elapsedTime = 0;}
+        totalTime = totalTime > 5000 ? totalTime-5000 : 0;
+        Playback.play();
+    }
+    Playback.updateSlider();
+};
+
+// Skips forward 5 seconds in the video and slides.
+// Maintains paused status if paused.
 Playback.skipForward = function () {
     if (isPaused) {
         elapsedTime = elapsedTime + 5000;
@@ -170,6 +178,7 @@ Playback.skipForward = function () {
 	Playback.updateSlider();
 };
 
+// changes millisecond String to pretty timing.
 // This is straight from slackOverflow
 String.prototype.toHHMMSS = function () {
     var sec_num = parseInt(this, 10); // don't forget the second param
@@ -177,7 +186,7 @@ String.prototype.toHHMMSS = function () {
     var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
     var seconds = sec_num - (hours * 3600) - (minutes * 60);
 
-    //if (hours   < 10) {hours   = "0"+hours;}
+    //if (hours   < 10) {hours   = "0"+hours;} we don't want the leading '0'
     if (minutes < 10) {minutes = "0"+minutes;}
     if (seconds < 10) {seconds = "0"+seconds;}
     return hours+':'+minutes+':'+seconds;
