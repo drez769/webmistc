@@ -367,6 +367,7 @@ if (Meteor.isClient) {
                         };
                         document.getElementById('control-fluid').appendChild(video);
                         video.id = 'uploadedRecording';
+                        video.controls = false;
 						Playback.stop();
                         Playback.upload(JSON.parse(recordedJsonStr));
 						
